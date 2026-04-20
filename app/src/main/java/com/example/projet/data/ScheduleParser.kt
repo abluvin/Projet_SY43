@@ -3,129 +3,140 @@ package com.example.projet.data
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.DayOfWeek
-import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
 
-/**
- * Parser pour transformer le texte OCR/copié en événements d'emploi du temps
- * Format attendu: CODE    TYPE    GROUPE    JOUR    HEURE_DEBUT    HEURE_FIN    FREQUENCE    MODE    SALLES
- */
 object ScheduleParser {
 
     private val dayMap = mapOf(
-        "lundi" to 0,
-        "mardi" to 1,
-        "mercredi" to 2,
-        "jeudi" to 3,
-        "vendredi" to 4
+        "lundi" to DayOfWeek.MONDAY,
+        "mardi" to DayOfWeek.TUESDAY,
+        "mercredi" to DayOfWeek.WEDNESDAY,
+        "jeudi" to DayOfWeek.THURSDAY,
+        "vendredi" to DayOfWeek.FRIDAY
     )
 
-    fun parseScheduleText(text: String, numberOfWeeks: Int = 4): List<Event> {
+    private val typeRegex = Regex("^(CM|TD|TP|EXAM)\\d*$", RegexOption.IGNORE_CASE)
+
+    private fun getSemesterRange(): Pair<LocalDate, LocalDate> {
+        val today = LocalDate.now()
+        val month = today.monthValue
+        val year = today.year
+        return when {
+            month in 3..8 -> Pair(LocalDate.of(year, 3, 1), LocalDate.of(year, 6, 30))
+            month in 9..12 -> Pair(LocalDate.of(year, 9, 1), LocalDate.of(year + 1, 1, 31))
+            else -> Pair(LocalDate.of(year - 1, 9, 1), LocalDate.of(year, 1, 31)) // jan/fev = fin automne
+        }
+    }
+
+    fun parseScheduleText(text: String): List<Event> {
         val events = mutableListOf<Event>()
         val lines = text.trim().split("\n")
-        
         var eventId = 1000
-        val baseWeekMonday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        
-        for (line in lines) {
-            val trimmedLine = line.trim()
-            if (trimmedLine.isEmpty()) continue
-            
-            // Diviser par espaces/tabs multiples
-            val parts = trimmedLine.split(Regex("""\s+""")).filter { it.isNotEmpty() }
 
-            if (parts.size < 8) continue // Pas assez de colonnes
+        val (semesterStart, semesterEnd) = getSemesterRange()
+        val firstMonday = semesterStart.with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY))
+
+        for (line in lines) {
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) continue
+
+            val parts = trimmed.split(Regex("""\s+""")).filter { it.isNotEmpty() }
+            if (parts.size < 7) continue
 
             try {
-                // Trouver le type de cours (CM, TD, TP)
-                var typeIndex = -1
-                var courseType = ""
-                for (i in 1 until minOf(3, parts.size)) {
-                    if (parts[i].matches(Regex("^(CM|TD|TP|EXAM)\\d?[A-Z]?$", RegexOption.IGNORE_CASE))) {
-                        typeIndex = i
-                        courseType = parts[i]
-                        break
-                    }
+                var idx = 0
+
+                // Collect course codes, skipping "|" separators (e.g. "WE4A | WE4B")
+                val codes = mutableListOf<String>()
+                while (idx < parts.size && !typeRegex.matches(parts[idx])) {
+                    if (parts[idx] != "|") codes.add(parts[idx])
+                    idx++
+                }
+                if (codes.isEmpty() || idx >= parts.size) continue
+
+                val courseCode = codes.joinToString(" | ")
+                val primaryCode = codes.first()
+
+                // Full type token e.g. "CM1", "TD2", "TP1"
+                val fullType = parts[idx++]
+                val typePrefix = fullType.takeWhile { it.isLetter() }.uppercase()
+                val sessionNum = fullType.dropWhile { it.isLetter() }
+
+                // Optional group letter (single uppercase letter A-Z)
+                var groupLetter = ""
+                if (idx < parts.size && parts[idx].matches(Regex("^[A-Z]$"))) {
+                    groupLetter = parts[idx++]
                 }
 
-                if (typeIndex == -1) continue
+                // Day name
+                if (idx >= parts.size) continue
+                val dayOfWeek = dayMap[parts[idx++].lowercase()] ?: continue
 
-                val courseCode = parts[0]
+                // Start / end time
+                if (idx + 1 >= parts.size) continue
+                val startTime = LocalTime.parse(parts[idx++])
+                val endTime = LocalTime.parse(parts[idx++])
 
-                // Le groupe peut être immédiatement après le type ou être un élément séparé
-                var groupNumber = ""
-                var dayIndex = typeIndex + 1
+                // Frequency (1 = hebdo, 2 = bi-hebdo)
+                if (idx >= parts.size) continue
+                val frequency = parts[idx++].toIntOrNull() ?: 1
 
-                // Vérifier si le groupe est dans le type (ex: TP1, CM1) ou séparé (ex: TP A)
-                if (courseType.length > 2) {
-                    // Type contient le groupe (ex: TP1, CMA)
-                    groupNumber = courseType.substring(2)
-                    courseType = courseType.substring(0, 2)
-                } else if (dayIndex < parts.size && parts[dayIndex].matches(Regex("^[A-Z0-9]$"))) {
-                    // Groupe séparé
-                    groupNumber = parts[dayIndex]
-                    dayIndex++
-                }
+                // Skip mode column ("Présentiel" etc.)
+                idx++
 
-                if (dayIndex >= parts.size) continue
+                // Everything remaining = rooms
+                val rooms = parts.drop(idx).joinToString(" ")
 
-                // Trouver le jour
-                val dayName = parts[dayIndex].lowercase()
-                if (!dayMap.containsKey(dayName)) continue
-
-                val dayOffsetInWeek = dayMap[dayName]!!
-
-                // Heures et minutes
-                if (dayIndex + 4 >= parts.size) continue
-
-                val timeParts = parts[dayIndex + 1].split(":")
-                if (timeParts.size != 2) continue
-                val startHour = timeParts[0].toInt()
-                val startMinute = timeParts[1].toInt()
-
-                val endTimeParts = parts[dayIndex + 2].split(":")
-                if (endTimeParts.size != 2) continue
-                val endHour = endTimeParts[0].toInt()
-                val endMinute = endTimeParts[1].toInt()
-
-                val frequency = parts[dayIndex + 3]
-                val mode = parts[dayIndex + 4]
-
-                // Le reste sont les salles
-                val rooms = parts.drop(dayIndex + 5).joinToString(" ")
-
-                // Déterminer le type d'événement
-                val eventTypeObj = when {
-                    courseType.contains("CM", ignoreCase = true) -> EventType.COURS
-                    courseType.contains("TD", ignoreCase = true) -> EventType.TD
-                    courseType.contains("TP", ignoreCase = true) -> EventType.TP
+                val eventType = when (typePrefix) {
+                    "CM" -> EventType.COURS
+                    "TD" -> EventType.TD
+                    "TP" -> EventType.TP
+                    "EXAM" -> EventType.EXAM
                     else -> EventType.COURS
                 }
 
-                // Créer l'événement pour chaque semaine
-                for (weekOffset in 0 until numberOfWeeks) {
-                    val eventDate = baseWeekMonday.plusDays(dayOffsetInWeek.toLong()).plusWeeks(weekOffset.toLong())
+                val title = "$courseCode - $typePrefix$sessionNum${if (groupLetter.isNotEmpty()) " $groupLetter" else ""}"
 
-                    val event = Event(
-                        id = (eventId++).toString(),
-                        code = courseCode,
-                        title = "$courseCode - $courseType${if (groupNumber.isNotEmpty()) " $groupNumber" else ""}",
-                        location = rooms.trim(),
-                        instructor = "Importé",
-                        date = eventDate,
-                        startTime = LocalTime.of(startHour, startMinute),
-                        endTime = LocalTime.of(endHour, endMinute),
-                        type = eventTypeObj
-                    )
+                // Generate one event per applicable week across the semester
+                var weekMonday = firstMonday
+                var weekNum = 1
 
-                    events.add(event)
+                while (!weekMonday.isAfter(semesterEnd)) {
+                    val include = when {
+                        frequency != 2 -> true
+                        groupLetter == "A" -> weekNum % 2 == 1  // semaines impaires
+                        groupLetter == "B" -> weekNum % 2 == 0  // semaines paires
+                        else -> weekNum % 2 == 1
+                    }
+
+                    if (include) {
+                        val eventDate = weekMonday.with(TemporalAdjusters.nextOrSame(dayOfWeek))
+                        if (!eventDate.isAfter(semesterEnd)) {
+                            events.add(
+                                Event(
+                                    id = (eventId++).toString(),
+                                    code = primaryCode,
+                                    title = title,
+                                    location = rooms,
+                                    instructor = "Importé",
+                                    date = eventDate,
+                                    startTime = startTime,
+                                    endTime = endTime,
+                                    type = eventType
+                                )
+                            )
+                        }
+                    }
+
+                    weekMonday = weekMonday.plusWeeks(1)
+                    weekNum++
                 }
+
             } catch (e: Exception) {
-                // Ignorer les lignes qui ne peuvent pas être parsées
                 continue
             }
         }
-        
+
         return events
     }
 }
