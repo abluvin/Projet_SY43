@@ -5,6 +5,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.DateRange
@@ -22,6 +25,7 @@ import com.example.projet.ui.home.HomeScreen
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.camera.CameraScreen
 import com.example.projet.ui.theme.ProjetTheme
+import com.example.projet.data.ScheduleParser
 
 enum class Screen {
     HOME, AGENDA, CHAT, GROUPS, MENU
@@ -77,6 +81,9 @@ class MainActivity : ComponentActivity() {
                             onTextRecognized = { text ->
                                 recognizedText = text
                                 showCamera = false
+                                // Parse the recognized text into events
+                                val events = ScheduleParser.parseScheduleText(text)
+                                // TODO: Add events to database/storage
                             },
                             onBack = { showCamera = false }
                         )
@@ -100,20 +107,48 @@ class MainActivity : ComponentActivity() {
                     Dialog(onDismissRequest = { recognizedText = "" }) {
                         Surface(
                             shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(0.9f)
                         ) {
                             Column(
                                 modifier = Modifier.padding(16.dp)
                             ) {
-                                Text("Texte reconnu:")
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(recognizedText)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Button(
-                                    onClick = { recognizedText = "" },
-                                    modifier = Modifier.align(Alignment.End)
+                                Text(
+                                    "Texte reconnu",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .verticalScroll(rememberScrollState())
                                 ) {
-                                    Text("OK")
+                                    Text(recognizedText, style = MaterialTheme.typography.bodySmall)
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Button(
+                                        onClick = { recognizedText = "" },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Annuler")
+                                    }
+                                    Button(
+                                        onClick = {
+                                            val events = ScheduleParser.parseScheduleText(recognizedText)
+                                            recognizedText = ""
+                                            // TODO: Add events to database
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Ajouter")
+                                    }
                                 }
                             }
                         }
