@@ -21,6 +21,9 @@ class AgendaViewModel : ViewModel() {
     private val _events = MutableStateFlow<List<Event>>(emptyList())
     val events: StateFlow<List<Event>> = _events.asStateFlow()
 
+    // Liste des événements importés
+    private val importedEvents = mutableListOf<Event>()
+
     init { refreshEvents() }
 
     fun selectDate(date: LocalDate) {
@@ -40,8 +43,15 @@ class AgendaViewModel : ViewModel() {
         refreshEvents()
     }
 
+    fun addEvents(newEvents: List<Event>) {
+        importedEvents.addAll(newEvents)
+        refreshEvents()
+    }
+
     private fun refreshEvents() {
-        _events.value = SampleData.getEventsForDate(_selectedDate.value)
+        val sampleEvents = SampleData.getEventsForDate(_selectedDate.value)
+        val importedForDate = importedEvents.filter { it.date == _selectedDate.value }
+        _events.value = (sampleEvents + importedForDate).sortedBy { it.startTime }
     }
 
     private fun weekOf(date: LocalDate): LocalDate =
@@ -50,7 +60,7 @@ class AgendaViewModel : ViewModel() {
     private fun firstDayWithEvents(weekStart: LocalDate): LocalDate {
         for (i in 0..4) {
             val d = weekStart.plusDays(i.toLong())
-            if (SampleData.getEventsForDate(d).isNotEmpty()) return d
+            if (SampleData.getEventsForDate(d).isNotEmpty() || importedEvents.any { it.date == d }) return d
         }
         return weekStart
     }

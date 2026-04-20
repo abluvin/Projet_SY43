@@ -21,11 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.projet.ui.agenda.AgendaViewModel
+import com.example.projet.data.ScheduleParser
 import com.example.projet.ui.home.HomeScreen
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.camera.CameraScreen
 import com.example.projet.ui.theme.ProjetTheme
-import com.example.projet.data.ScheduleParser
 
 enum class Screen {
     HOME, AGENDA, CHAT, GROUPS, MENU
@@ -45,7 +47,11 @@ class MainActivity : ComponentActivity() {
             ProjetTheme {
                 var currentScreen by remember { mutableStateOf(Screen.HOME) }
                 var showCamera by remember { mutableStateOf(false) }
+                var showPasteDialog by remember { mutableStateOf(false) }
                 var recognizedText by remember { mutableStateOf("") }
+                var pasteText by remember { mutableStateOf("") }
+
+                val agendaVM: AgendaViewModel = viewModel()
 
                 val navItems = listOf(
                     BottomNavItem(Screen.HOME, "Home", Icons.Filled.Home),
@@ -94,7 +100,9 @@ class MainActivity : ComponentActivity() {
                             )
                             Screen.AGENDA -> AgendaScreen(
                                 modifier = Modifier.padding(innerPadding),
-                                onCameraClick = { showCamera = true }
+                                onCameraClick = { showCamera = true },
+                                onPasteClick = { showPasteDialog = true },
+                                vm = agendaVM
                             )
                             Screen.CHAT -> PlaceholderScreen("Chat", Modifier.padding(innerPadding))
                             Screen.GROUPS -> PlaceholderScreen("Groupes", Modifier.padding(innerPadding))
@@ -142,10 +150,72 @@ class MainActivity : ComponentActivity() {
                                     Button(
                                         onClick = {
                                             val events = ScheduleParser.parseScheduleText(recognizedText)
+                                            if (events.isNotEmpty()) {
+                                                agendaVM.addEvents(events)
+                                            }
                                             recognizedText = ""
-                                            // TODO: Add events to database
                                         },
                                         modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Ajouter")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (showPasteDialog) {
+                    Dialog(onDismissRequest = { showPasteDialog = false }) {
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            modifier = Modifier
+                                .padding(16.dp)
+                                .fillMaxWidth(0.9f)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Text(
+                                    "Coller votre emploi du temps",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 12.dp)
+                                )
+                                OutlinedTextField(
+                                    value = pasteText,
+                                    onValueChange = { pasteText = it },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp),
+                                    label = { Text("Texte d'ADE") },
+                                    placeholder = { Text("Collez votre texte ici...") }
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            showPasteDialog = false
+                                            pasteText = ""
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text("Annuler")
+                                    }
+                                    Button(
+                                        onClick = {
+                                            val events = ScheduleParser.parseScheduleText(pasteText)
+                                            if (events.isNotEmpty()) {
+                                                agendaVM.addEvents(events)
+                                            }
+                                            showPasteDialog = false
+                                            pasteText = ""
+                                        },
+                                        modifier = Modifier.weight(1f),
+                                        enabled = pasteText.isNotEmpty()
                                     ) {
                                         Text("Ajouter")
                                     }

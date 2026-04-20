@@ -42,6 +42,7 @@ private fun uvColor(code: String): Color = when (code) {
 fun AgendaScreen(
     modifier: Modifier = Modifier,
     onCameraClick: () -> Unit = {},
+    onPasteClick: () -> Unit = {},
     vm: AgendaViewModel = viewModel()
 ) {
     val weekStart by vm.weekStart.collectAsState()
@@ -123,7 +124,8 @@ fun AgendaScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .padding(bottom = 16.dp),
+                    .padding(bottom = 16.dp)
+                    .clickable { onPasteClick() },
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
