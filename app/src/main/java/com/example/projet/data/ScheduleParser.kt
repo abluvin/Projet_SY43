@@ -27,7 +27,7 @@ object ScheduleParser {
         "EXAM" to EventType.EXAM
     )
 
-    fun parseScheduleText(text: String): List<Event> {
+    fun parseScheduleText(text: String, numberOfWeeks: Int = 4): List<Event> {
         val events = mutableListOf<Event>()
         val lines = text.trim().split("\n")
         
@@ -64,7 +64,6 @@ object ScheduleParser {
                     val rooms = groups[11]
 
                     val dayOffsetInWeek = dayMap[dayName.lowercase()] ?: continue
-                    val eventDate = baseWeekMonday.plusDays(dayOffsetInWeek.toLong())
                     
                     val eventTypeObj = when {
                         courseType.contains("CM", ignoreCase = true) -> EventType.COURS
@@ -73,19 +72,24 @@ object ScheduleParser {
                         else -> EventType.COURS
                     }
                     
-                    val event = Event(
-                        id = (eventId++).toString(),
-                        code = courseCode.replace("|", " |"),
-                        title = "$courseCode - $courseType${if (groupNumber.isNotEmpty()) " $groupNumber" else ""}",
-                        location = rooms.trim(),
-                        instructor = "Importé",
-                        date = eventDate,
-                        startTime = LocalTime.of(startHour.toInt(), startMinute.toInt()),
-                        endTime = LocalTime.of(endHour.toInt(), endMinute.toInt()),
-                        type = eventTypeObj
-                    )
-                    
-                    events.add(event)
+                    // Créer l'événement pour chaque semaine
+                    for (weekOffset in 0 until numberOfWeeks) {
+                        val eventDate = baseWeekMonday.plusDays(dayOffsetInWeek.toLong()).plusWeeks(weekOffset.toLong())
+                        
+                        val event = Event(
+                            id = (eventId++).toString(),
+                            code = courseCode.replace("|", " |"),
+                            title = "$courseCode - $courseType${if (groupNumber.isNotEmpty()) " $groupNumber" else ""}",
+                            location = rooms.trim(),
+                            instructor = "Importé",
+                            date = eventDate,
+                            startTime = LocalTime.of(startHour.toInt(), startMinute.toInt()),
+                            endTime = LocalTime.of(endHour.toInt(), endMinute.toInt()),
+                            type = eventTypeObj
+                        )
+                        
+                        events.add(event)
+                    }
                 } catch (e: Exception) {
                     // Ignorer les lignes qui ne peuvent pas être parsées
                     continue
