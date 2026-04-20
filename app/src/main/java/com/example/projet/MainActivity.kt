@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.example.projet.ui.agenda.AgendaScreen
+import com.example.projet.ui.home.HomeScreen
 import com.example.projet.ui.camera.CameraScreen
 import com.example.projet.ui.theme.ProjetTheme
 
@@ -25,26 +25,21 @@ class MainActivity : ComponentActivity() {
                 var recognizedText by remember { mutableStateOf("") }
 
                 Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    floatingActionButton = {
-                        if (!showCamera) {
-                            FloatingActionButton(onClick = { showCamera = true }) {
-                                Text("Scan")
-                            }
-                        }
-                    }
+                    modifier = Modifier.fillMaxSize()
                 ) { innerPadding ->
                     if (showCamera) {
                         CameraScreen(
                             onTextRecognized = { text ->
                                 recognizedText = text
                                 showCamera = false
-                                // TODO: Parse text and add events
                             },
                             onBack = { showCamera = false }
                         )
                     } else {
-                        AgendaScreen(modifier = Modifier.padding(innerPadding))
+                        HomeScreen(
+                            modifier = Modifier.padding(innerPadding),
+                            onCameraClick = { showCamera = true }
+                        )
                     }
                 }
 
