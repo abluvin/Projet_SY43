@@ -41,122 +41,259 @@ private fun uvColor(code: String): Color = when (code) {
 @Composable
 fun AgendaScreen(
     modifier: Modifier = Modifier,
+    onCameraClick: () -> Unit = {},
     vm: AgendaViewModel = viewModel()
 ) {
     val weekStart by vm.weekStart.collectAsState()
     val selected by vm.selectedDate.collectAsState()
     val events by vm.events.collectAsState()
 
-    Column(modifier = modifier.fillMaxSize()) {
-        WeekHeader(weekStart, vm::prevWeek, vm::nextWeek)
-        DaySelector(weekStart, selected, vm::selectDate)
-        HorizontalDivider()
-        if (events.isEmpty()) {
-            EmptyDay()
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxSize()
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        // Header section
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
             ) {
-                items(events) { EventCard(it) }
+                Text(
+                    text = "Ajouter votre planning",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Text(
+                    text = "Importez vos cours en un clin d'œil. Notre IA détecte automatiquement les salles, horaires et codes d'UV.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
             }
         }
-    }
-}
 
-@Composable
-private fun WeekHeader(
-    weekStart: LocalDate,
-    onPrev: () -> Unit,
-    onNext: () -> Unit
-) {
-    val fmt = DateTimeFormatter.ofPattern("d MMM", Locale.FRENCH)
-    val label = "${weekStart.format(fmt)} – ${weekStart.plusDays(4).format(fmt)} ${weekStart.year}"
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(onClick = onPrev) {
-            Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "Semaine précédente")
-        }
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold
-        )
-        IconButton(onClick = onNext) {
-            Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "Semaine suivante")
-        }
-    }
-}
-
-@Composable
-private fun DaySelector(
-    weekStart: LocalDate,
-    selected: LocalDate,
-    onSelect: (LocalDate) -> Unit
-) {
-    val today = LocalDate.now()
-    val dayLabels = listOf("L", "M", "M", "J", "V")
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        for (i in 0..4) {
-            val date = weekStart.plusDays(i.toLong())
-            val isSelected = date == selected
-            val isToday = date == today
-            val hasEvents = SampleData.getEventsForDate(date).isNotEmpty()
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+        // OCR Import Card
+        item {
+            Card(
                 modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.primary
-                        else Color.Transparent
-                    )
-                    .clickable { onSelect(date) }
-                    .padding(vertical = 6.dp, horizontal = 4.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 12.dp)
+                    .clickable { onCameraClick() },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF1565C0)
+                )
             ) {
-                Text(
-                    text = dayLabels[i],
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = date.dayOfMonth.toString(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                            else if (isToday) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
-                )
-                if (hasEvents) {
-                    Box(
-                        modifier = Modifier
-                            .size(4.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.onPrimary
-                                else MaterialTheme.colorScheme.primary
-                            )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Text(
+                        text = "📷",
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.padding(end = 16.dp)
                     )
-                } else {
-                    Spacer(Modifier.height(4.dp))
+                    Column {
+                        Text(
+                            text = "Importer via Photo/OCR",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Prenez en photo votre écran ou importez un PDF",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
                 }
             }
+        }
+
+        // Copy Paste Card
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Text(
+                        text = "📋",
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(end = 16.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Copier-Coller le texte",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Utilisez le texte brut d'ADE",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        }
+
+        // Mon Planning section
+        item {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Mon Planning",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            val fmt = DateTimeFormatter.ofPattern("d MMM", Locale.FRENCH)
+            Text(
+                text = "SEMAINE DU ${weekStart.format(fmt).uppercase()}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
+
+        // Week navigation
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = vm::prevWeek) {
+                    Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "Semaine précédente")
+                }
+                Text(
+                    text = "${weekStart.format(DateTimeFormatter.ofPattern("d MMM", Locale.FRENCH))} – ${weekStart.plusDays(4).format(DateTimeFormatter.ofPattern("d MMM", Locale.FRENCH))} ${weekStart.year}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                IconButton(onClick = vm::nextWeek) {
+                    Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "Semaine suivante")
+                }
+            }
+        }
+
+        // Day selector
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                val dayLabels = listOf("L", "M", "M", "J", "V")
+                val today = LocalDate.now()
+
+                repeat(5) { i ->
+                    val date = weekStart.plusDays(i.toLong())
+                    val isSelected = date == selected
+                    val isToday = date == today
+                    val hasEvents = SampleData.getEventsForDate(date).isNotEmpty()
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else Color.Transparent
+                            )
+                            .clickable { vm.selectDate(date) }
+                            .padding(vertical = 6.dp, horizontal = 4.dp)
+                    ) {
+                        Text(
+                            text = dayLabels[i],
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = date.dayOfMonth.toString(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                    else if (isToday) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center
+                        )
+                        if (hasEvents) {
+                            Box(
+                                modifier = Modifier
+                                    .size(4.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                        else MaterialTheme.colorScheme.primary
+                                    )
+                            )
+                        } else {
+                            Spacer(Modifier.height(4.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Events
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
+
+        if (events.isEmpty()) {
+            item {
+                EmptyDay()
+            }
+        } else {
+            items(events.size) { index ->
+                EventCard(events[index])
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun EmptyDay() {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("😌", style = MaterialTheme.typography.displaySmall)
+            Spacer(Modifier.height(8.dp))
+            Text("Pas de cours ce jour", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                "Profitez-en pour réviser !",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -227,28 +364,3 @@ private fun EventCard(event: Event) {
     }
 }
 
-@Composable
-private fun EmptyDay() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("😌", style = MaterialTheme.typography.displaySmall)
-            Spacer(Modifier.height(8.dp))
-            Text("Pas de cours ce jour", style = MaterialTheme.typography.bodyLarge)
-            Text(
-                "Profitez-en pour réviser !",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@androidx.compose.ui.tooling.preview.Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun AgendaScreenPreview() {
-    ProjetTheme {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-            AgendaScreen(modifier = Modifier.padding(innerPadding))
-        }
-    }
-}

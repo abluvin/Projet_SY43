@@ -83,11 +83,11 @@ class MainActivity : ComponentActivity() {
                     } else {
                         when (currentScreen) {
                             Screen.HOME -> HomeScreen(
-                                modifier = Modifier.padding(innerPadding),
-                                onCameraClick = { showCamera = true }
+                                modifier = Modifier.padding(innerPadding)
                             )
                             Screen.AGENDA -> AgendaScreen(
-                                modifier = Modifier.padding(innerPadding)
+                                modifier = Modifier.padding(innerPadding),
+                                onCameraClick = { showCamera = true }
                             )
                             Screen.CHAT -> PlaceholderScreen("Chat", Modifier.padding(innerPadding))
                             Screen.GROUPS -> PlaceholderScreen("Groupes", Modifier.padding(innerPadding))
