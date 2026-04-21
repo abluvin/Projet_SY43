@@ -28,7 +28,12 @@ class MainActivity : ComponentActivity() {
                         Register()
                     }
 
-                }
+                  /* Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Greeting(
+                        name = "Android",
+                        modifier = Modifier.padding(innerPadding)
+                    )
+                }*/
             }
         }
     }
