@@ -35,13 +35,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun Register( modifier: Modifier= Modifier){
+fun Register(modifier: Modifier = Modifier, onRegister: (String) -> Unit = {}) {
     val utbmBlue = Color(0xFF0055A4)
     val backgroundColor = Color(0xFFF8F9FA)
 
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf(" ") }
+    var password by remember { mutableStateOf("") }
 
     Column(
 
@@ -115,9 +115,10 @@ fun Register( modifier: Modifier= Modifier){
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = {},
+            onClick = { onRegister(username) },
             modifier = Modifier.fillMaxWidth()
                 .height(56.dp),
+            enabled = username.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = utbmBlue,
 

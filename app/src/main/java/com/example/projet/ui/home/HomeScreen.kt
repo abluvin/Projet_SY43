@@ -14,6 +14,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
+    username: String = "",
     onCameraClick: () -> Unit = {}
 ) {
     Box(
@@ -27,19 +28,18 @@ fun HomeScreen(
             modifier = Modifier.padding(32.dp)
         ) {
             Text(
-                text = "Bienvenue! 👋",
+                text = if (username.isNotBlank()) "Bonjour, $username 👋" else "Bienvenue! 👋",
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
-            
+
             Text(
                 text = "Votre assistant pour gérer votre emploi du temps",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(bottom = 32.dp)
             )
 
-            // Quick stats or features can go here
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -70,6 +70,3 @@ fun HomeScreen(
         }
     }
 }
-
-
-

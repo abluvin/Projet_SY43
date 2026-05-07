@@ -14,9 +14,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.ScheduleParser
@@ -44,14 +47,74 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ProjetTheme {
-                MainApp()
+                AppRoot()
             }
         }
     }
 }
 
+private enum class AppState { REGISTER, WELCOME, MAIN }
+
 @Composable
-fun MainApp() {
+fun AppRoot() {
+    var appState by remember { mutableStateOf(AppState.REGISTER) }
+    var username by remember { mutableStateOf("") }
+
+    when (appState) {
+        AppState.REGISTER -> Register(onRegister = { name ->
+            username = name
+            appState = AppState.WELCOME
+        })
+        AppState.WELCOME -> WelcomeScreen(
+            username = username,
+            onContinue = { appState = AppState.MAIN }
+        )
+        AppState.MAIN -> MainApp(username = username)
+    }
+}
+
+@Composable
+fun WelcomeScreen(username: String, onContinue: () -> Unit) {
+    val utbmBlue = Color(0xFF0055A4)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("👋", fontSize = 64.sp)
+        Spacer(Modifier.height(24.dp))
+        Text(
+            text = "Bienvenue,",
+            fontSize = 28.sp,
+            color = Color.Gray
+        )
+        Text(
+            text = username,
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Bold,
+            color = utbmBlue
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "Votre compte UTBM a été créé avec succès.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray
+        )
+        Spacer(Modifier.height(48.dp))
+        Button(
+            onClick = onContinue,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = utbmBlue)
+        ) {
+            Text("Commencer", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun MainApp(username: String = "") {
     var currentScreen by remember { mutableStateOf(Screen.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
@@ -104,7 +167,8 @@ fun MainApp() {
         } else {
             when (currentScreen) {
                 Screen.HOME -> HomeScreen(
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier.padding(innerPadding),
+                    username = username
                 )
                 Screen.AGENDA -> AgendaScreen(
                     modifier = Modifier.padding(innerPadding),
@@ -264,6 +328,6 @@ fun PlaceholderScreen(title: String, modifier: Modifier = Modifier) {
 @Composable
 fun GreetingPreview() {
     ProjetTheme {
-        MainApp()
+        AppRoot()
     }
 }
