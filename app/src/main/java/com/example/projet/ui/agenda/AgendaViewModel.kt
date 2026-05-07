@@ -12,6 +12,8 @@ import java.time.temporal.TemporalAdjusters
 
 class AgendaViewModel : ViewModel() {
 
+    private val importedEvents = mutableListOf<Event>()
+
     private val _weekStart = MutableStateFlow(weekOf(LocalDate.now()))
     val weekStart: StateFlow<LocalDate> = _weekStart.asStateFlow()
 
@@ -20,9 +22,6 @@ class AgendaViewModel : ViewModel() {
 
     private val _events = MutableStateFlow<List<Event>>(emptyList())
     val events: StateFlow<List<Event>> = _events.asStateFlow()
-
-    // Liste des événements importés
-    private val importedEvents = mutableListOf<Event>()
 
     init { refreshEvents() }
 
