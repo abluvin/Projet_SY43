@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -27,6 +28,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -51,7 +54,7 @@ import com.example.projet.R
 fun HomeScreen(
     modifier: Modifier = Modifier,
     username: String = "",
-    onCameraClick: () -> Unit = {}
+    onCreatePostClick: () -> Unit = {}
 ) {
     val utbmDarkColor = Color(0xFF001B3C)
     val addIconColor = Color(0xFF5992E4)
@@ -92,7 +95,7 @@ fun HomeScreen(
         },
         floatingActionButton = {
             IconButton(
-                onClick = onCameraClick,
+                onClick = onCreatePostClick,
                 modifier = Modifier.size(64.dp)
             ) {
                 Icon(
@@ -151,7 +154,9 @@ fun HomeScreen(
 @Composable
 fun PostBloc(name: String, description: String, modifier: Modifier = Modifier) {
     var expanded by remember { mutableStateOf(false) }
-    val extraPadding = if (expanded) 48.dp else 0.dp
+    var showComments by remember { mutableStateOf(false) }
+    var comments by remember { mutableStateOf(listOf("Super poste !", "Merci pour l'info")) }
+    var newCommentText by remember { mutableStateOf("") }
 
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF003061), Color(0xFF004689))
@@ -173,7 +178,6 @@ fun PostBloc(name: String, description: String, modifier: Modifier = Modifier) {
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(bottom = extraPadding)
                 ) {
                     Text(
                         text = name,
@@ -187,7 +191,10 @@ fun PostBloc(name: String, description: String, modifier: Modifier = Modifier) {
                     )
                 }
                 ElevatedButton(
-                    onClick = { expanded = !expanded }
+                    onClick = { 
+                        expanded = !expanded 
+                        if (!expanded) showComments = false
+                    }
                 ) {
                     Text(if (expanded) "Réduire" else "Réagir")
                 }
@@ -197,14 +204,54 @@ fun PostBloc(name: String, description: String, modifier: Modifier = Modifier) {
                     modifier = Modifier.padding(top = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    IconButton(onClick = { /* TODO */ }) {
+                    IconButton(onClick = { /* Action Like */ }) {
                         Icon(Icons.Filled.Favorite, contentDescription = "Like", tint = Color.White)
                     }
-                    IconButton(onClick = { /* TODO */ }) {
+                    IconButton(onClick = { showComments = !showComments }) {
                         Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Comment", tint = Color.White)
                     }
-                    IconButton(onClick = { /* TODO */ }) {
+                    IconButton(onClick = { /* Action Share */ }) {
                         Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
+                    }
+                }
+
+                if (showComments) {
+                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                        comments.forEach { comment ->
+                            Text(
+                                text = "• $comment",
+                                color = Color.White,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = newCommentText,
+                                onValueChange = { newCommentText = it },
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text("Ajouter un commentaire...", color = Color.White.copy(alpha = 0.6f)) },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color.White,
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
+                                    cursorColor = Color.White,
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                ),
+                                textStyle = MaterialTheme.typography.bodySmall
+                            )
+                            IconButton(onClick = {
+                                if (newCommentText.isNotBlank()) {
+                                    comments = comments + newCommentText
+                                    newCommentText = ""
+                                }
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Envoyer", tint = Color.White)
+                            }
+                        }
                     }
                 }
             }

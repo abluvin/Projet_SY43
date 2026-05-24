@@ -26,11 +26,12 @@ import com.example.projet.data.ScheduleParser
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
+import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
 import com.example.projet.ui.theme.ProjetTheme
 
 enum class Screen {
-    HOME, AGENDA, CHAT, GROUPS, MENU
+    HOME, AGENDA, CHAT, GROUPS, MENU, CREATE_POST
 }
 
 data class BottomNavItem(
@@ -116,6 +117,7 @@ fun WelcomeScreen(username: String, onContinue: () -> Unit) {
 @Composable
 fun MainApp(username: String = "") {
     var currentScreen by remember { mutableStateOf(Screen.HOME) }
+    var previousScreen by remember { mutableStateOf(Screen.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
@@ -134,22 +136,24 @@ fun MainApp(username: String = "") {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar(modifier = Modifier.fillMaxWidth()) {
-                navItems.forEach { item ->
-                    NavigationBarItem(
-                        icon = {
-                            Icon(item.icon, contentDescription = item.label)
-                        },
-                        label = {
-                            Text(item.label, style = MaterialTheme.typography.labelSmall)
-                        },
-                        selected = currentScreen == item.screen,
-                        onClick = {
-                            if (!showCamera) {
-                                currentScreen = item.screen
+            if (currentScreen != Screen.CREATE_POST) {
+                NavigationBar(modifier = Modifier.fillMaxWidth()) {
+                    navItems.forEach { item ->
+                        NavigationBarItem(
+                            icon = {
+                                Icon(item.icon, contentDescription = item.label)
+                            },
+                            label = {
+                                Text(item.label, style = MaterialTheme.typography.labelSmall)
+                            },
+                            selected = currentScreen == item.screen,
+                            onClick = {
+                                if (!showCamera) {
+                                    currentScreen = item.screen
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -168,7 +172,11 @@ fun MainApp(username: String = "") {
             when (currentScreen) {
                 Screen.HOME -> HomeScreen(
                     modifier = Modifier.padding(innerPadding),
-                    username = username
+                    username = username,
+                    onCreatePostClick = {
+                        previousScreen = Screen.HOME
+                        currentScreen = Screen.CREATE_POST
+                    }
                 )
                 Screen.AGENDA -> AgendaScreen(
                     modifier = Modifier.padding(innerPadding),
@@ -187,6 +195,15 @@ fun MainApp(username: String = "") {
                 Screen.MENU -> PlaceholderScreen(
                     "Menu",
                     Modifier.padding(innerPadding)
+                )
+                Screen.CREATE_POST -> CreatePostScreen(
+                    onPostCreated = { text, uri ->
+                        // Handle post creation (e.g., save to state or DB)
+                        currentScreen = previousScreen
+                    },
+                    onBack = {
+                        currentScreen = previousScreen
+                    }
                 )
             }
         }
@@ -270,8 +287,7 @@ fun MainApp(username: String = "") {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                            verticalAlignment = Alignment.CenterVertically) {
                             Button(
                                 onClick = {
                                     showPasteDialog = false
