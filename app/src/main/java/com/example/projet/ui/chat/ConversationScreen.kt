@@ -25,10 +25,10 @@ fun ConversationScreen(
     onBack: () -> Unit
 ) {
     var messages by remember { mutableStateOf(listOf(
-        Message("Salut ! Tu as pu avancer sur le projet SY43 ?", false, "10:00"),
-        Message("Oui, j'ai fini la partie UI du chat.", true, "10:05"),
-        Message("Top ! Je m'occupe de la base de données alors.", false, "10:06"),
-        Message(chatItem.lastMessage, false, chatItem.time)
+        Message(text = "Salut ! Tu as pu avancer sur le projet SY43 ?", isFromUser = false, time = "10:00"),
+        Message(text = "Oui, j'ai fini la partie UI du chat.", isFromUser = true, time = "10:05"),
+        Message(text = "Top ! Je m'occupe de la base de données alors.", isFromUser = false, time = "10:06"),
+        Message(text = chatItem.lastMessage, isFromUser = false, time = chatItem.time)
     )) }
     var newMessageText by remember { mutableStateOf("") }
 
@@ -104,7 +104,7 @@ fun ConversationScreen(
                     IconButton(
                         onClick = {
                             if (newMessageText.isNotBlank()) {
-                                messages = messages + Message(newMessageText, true, "Maintenant")
+                                messages = messages + Message(text = newMessageText, isFromUser = true, time = "Maintenant")
                                 newMessageText = ""
                             }
                         },

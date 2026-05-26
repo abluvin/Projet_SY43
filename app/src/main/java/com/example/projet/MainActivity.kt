@@ -26,7 +26,7 @@ import com.example.projet.data.ScheduleParser
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
-import com.example.projet.ui.chat.ChatItem
+import com.example.projet.data.ChatItem
 import com.example.projet.ui.chat.ChatScreen
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
@@ -226,7 +226,7 @@ fun MainApp(username: String = "") {
                             chatItem = item,
                             onBack = { currentScreen = Screen.CHAT }
                         )
-                    }
+                    } ?: Unit
                 }
                 Screen.COURSE_HUB -> CourseScreen(
                     courseName = "SY43 - Plateformes Mobiles",

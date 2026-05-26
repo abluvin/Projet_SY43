@@ -1,4 +1,25 @@
 package com.example.projet.data
 
-class Post {
-}
+import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
+import androidx.room.PrimaryKey
+
+@Entity(
+    tableName = "post",
+    foreignKeys = [ForeignKey(
+        entity = User::class,
+        parentColumns = ["id"],
+        childColumns = ["idUser"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index("idUser")]
+)
+data class Post(
+    @PrimaryKey(autoGenerate = true)
+    var id: Int = 0,
+    var text: String = "",
+    var idUser: Int,
+    var imageUrl: String? = null,
+    var timestamp: Long = System.currentTimeMillis()
+)

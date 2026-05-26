@@ -29,11 +29,11 @@ fun CourseScreen(
     
     val materials = remember {
         listOf(
-            CourseMaterial("Support de Cours - Chapitre 1", "Introduction aux systèmes mobiles", "10 Oct"),
-            CourseMaterial("TD 1 - Layouts", "Exercices sur Jetpack Compose", "12 Oct"),
-            CourseMaterial("Support de Cours - Chapitre 2", "Gestion de l'état et Navigation", "17 Oct"),
-            CourseMaterial("TP 1 - CameraX", "Sujet du premier TP noté", "Hier"),
-            CourseMaterial("Annales 2023", "Examen final de l'année dernière", "Aujourd'hui")
+            CourseMaterial(title = "Support de Cours - Chapitre 1", description = "Introduction aux systèmes mobiles", date = "10 Oct"),
+            CourseMaterial(title = "TD 1 - Layouts", description = "Exercices sur Jetpack Compose", date = "12 Oct"),
+            CourseMaterial(title = "Support de Cours - Chapitre 2", description = "Gestion de l'état et Navigation", date = "17 Oct"),
+            CourseMaterial(title = "TP 1 - CameraX", description = "Sujet du premier TP noté", date = "Hier"),
+            CourseMaterial(title = "Annales 2023", description = "Examen final de l'année dernière", date = "Aujourd'hui")
         )
     }
 
