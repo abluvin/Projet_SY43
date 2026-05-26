@@ -6,20 +6,20 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "message",
+    tableName = "post",
     foreignKeys = [ForeignKey(
-        entity = ChatItem::class,
+        entity = User::class,
         parentColumns = ["id"],
-        childColumns = ["chatItemId"],
+        childColumns = ["idUser"],
         onDelete = ForeignKey.CASCADE
     )],
-    indices = [Index("chatItemId")]
+    indices = [Index("idUser")]
 )
-data class Message(
+data class Post(
     @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
-    val chatItemId: Int = 0,
-    val text: String,
-    val isFromUser: Boolean,
-    val time: String
+    var id: Int = 0,
+    var text: String = "",
+    var idUser: Int,
+    var imageUrl: String? = null,
+    var timestamp: Long = System.currentTimeMillis()
 )

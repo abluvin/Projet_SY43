@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -27,26 +29,17 @@ fun ChatScreen(
     onConversationClick: (ChatItem) -> Unit,
     onCourseHubClick: () -> Unit,
     onNewChatClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    vm: ChatViewModel = viewModel()
 ) {
     val utbmBlue = Color(0xFF0055A4)
 
-    val allChatItems = remember {
-        listOf(
-            ChatItem(1, "Lucas Bernard", "Tu as fini le rapport de TP pour demain ?", "14:20", unreadCount = 2, hasOnlineStatus = true),
-            ChatItem(2, "Sarah Martin", "On se capte à la cafétéria à 12h30 ?", "Hier"),
-            ChatItem(3, "BDE UTBM – Gala 2024", "La vente des billets est officiellement ouverte !", "Mar", isGroup = true),
-            ChatItem(4, "Thomas Dupont (Assistance)", "Message vocal (0:42)", "Lun", messageType = MessageType.VOICE_MESSAGE),
-            ChatItem(5, "Emma Wilson", "A envoyé une photo", "10:15", messageType = MessageType.IMAGE),
-            ChatItem(6, "Cécile Dubois", "Le cours de SY43 est déplacé en amphi Nord.", "Ven", isCourse = true),
-            ChatItem(7, "Projet Mobile SY43", "Est-ce qu'on ajoute Firebase ?", "11:05", isGroup = true)
-        )
-    }
+    val allChatItems by vm.conversations.collectAsState()
 
     val filters = listOf("Tout", "Non lus", "Groupes", "Cours")
     var selectedFilter by remember { mutableStateOf("Tout") }
 
-    val filteredItems = remember(selectedFilter) {
+    val filteredItems = remember(selectedFilter, allChatItems) {
         when (selectedFilter) {
             "Non lus" -> allChatItems.filter { it.unreadCount > 0 }
             "Groupes" -> allChatItems.filter { it.isGroup }

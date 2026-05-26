@@ -1,5 +1,11 @@
 package com.example.projet.data
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "chat_item")
 data class ChatItem(
+    @PrimaryKey(autoGenerate = true)
     val id: Int,
     val name: String,
     val lastMessage: String,
