@@ -17,13 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-data class CourseMaterial(
-    val title: String,
-    val description: String,
-    val date: String,
-    val type: String = "PDF"
-)
+import com.example.projet.data.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

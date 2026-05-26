@@ -19,22 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-data class ChatItem(
-    val id: Int,
-    val name: String,
-    val lastMessage: String,
-    val time: String,
-    val unreadCount: Int = 0,
-    val isGroup: Boolean = false,
-    val isCourse: Boolean = false,
-    val hasOnlineStatus: Boolean = false,
-    val messageType: MessageType = MessageType.TEXT
-)
-
-enum class MessageType {
-    TEXT, IMAGE, VOICE_MESSAGE
-}
+import com.example.projet.data.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
