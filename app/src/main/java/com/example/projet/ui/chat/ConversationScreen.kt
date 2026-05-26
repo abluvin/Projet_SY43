@@ -16,8 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-data class Message(val text: String, val isFromUser: Boolean, val time: String)
+import com.example.projet.data.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
