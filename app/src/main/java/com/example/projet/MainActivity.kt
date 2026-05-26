@@ -22,17 +22,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.projet.data.ChatItem
 import com.example.projet.data.ScheduleParser
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
-import com.example.projet.ui.chat.ChatItem
+import com.example.projet.ui.Register.Register
 import com.example.projet.ui.chat.ChatScreen
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
 import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
+import com.example.projet.ui.restaurant.MenuScreen
 import com.example.projet.ui.theme.ProjetTheme
 
 enum class Screen {
@@ -208,10 +210,8 @@ fun MainApp(username: String = "") {
                     "Groupes",
                     Modifier.padding(innerPadding)
                 )
-                Screen.MENU -> PlaceholderScreen(
-                    "Restaurant",
-                    Modifier.padding(innerPadding)
-                )
+                Screen.MENU -> MenuScreen()
+
                 Screen.CREATE_POST -> CreatePostScreen(
                     onPostCreated = { text, uri ->
                         currentScreen = previousScreen

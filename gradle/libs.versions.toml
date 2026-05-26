@@ -13,6 +13,7 @@ room = "2.6.1"
 mlkitTextRecognition = "16.0.1"
 coroutinesPlayServices = "1.7.3"
 camerax = "1.4.0"
+uiText = "1.11.2"
 
 
 [libraries]
@@ -40,6 +41,7 @@ androidx-camera-core = { group = "androidx.camera", name = "camera-core", versio
 androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
+androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

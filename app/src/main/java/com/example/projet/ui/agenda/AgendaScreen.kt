@@ -23,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.Event
 import com.example.projet.data.EventType
 import com.example.projet.data.SampleData
+import com.example.projet.ui.chat.ChatHeader
 import com.example.projet.ui.theme.ProjetTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -54,6 +55,7 @@ fun AgendaScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+
         // Header section
         item {
             Column(
@@ -61,6 +63,7 @@ fun AgendaScreen(
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
+                ChatHeader()
                 Text(
                     text = "Ajouter votre planning",
                     style = MaterialTheme.typography.headlineSmall,

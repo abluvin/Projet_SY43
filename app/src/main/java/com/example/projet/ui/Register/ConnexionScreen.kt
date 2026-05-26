@@ -1,4 +1,4 @@
-package com.example.projet
+package com.example.projet.ui.Register
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +26,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Gray
 import androidx.compose.ui.text.font.FontWeight
@@ -34,18 +33,20 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+
 @Composable
-fun Register(modifier: Modifier = Modifier, onRegister: (String) -> Unit = {}) {
+fun Connexion(){
+
     val utbmBlue = Color(0xFF0055A4)
     val backgroundColor = Color(0xFFF8F9FA)
 
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf(" ") }
 
     Column(
 
-        modifier= Modifier.fillMaxSize()
+        modifier= androidx.compose.ui.Modifier.fillMaxSize()
             .background(backgroundColor)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -54,7 +55,7 @@ fun Register(modifier: Modifier = Modifier, onRegister: (String) -> Unit = {}) {
         ) {
 
 
-        Spacer(modifier = Modifier.height(60.dp))
+        Spacer(modifier = androidx.compose.ui.Modifier.height(40.dp))
 
         Text(
             text = "UTBM",
@@ -64,21 +65,21 @@ fun Register(modifier: Modifier = Modifier, onRegister: (String) -> Unit = {}) {
         )
 
         Text(
-            text = "Créer votre compte",
+            text = "Connectez-vous à votre compte",
             color = Gray,
             fontSize = 16.sp
         )
 
-        Spacer(modifier = Modifier.height(40.dp))
+        Spacer(modifier = androidx.compose.ui.Modifier.height(32.dp))
 
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color.White),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
-                modifier = Modifier.padding(20.dp),
+                modifier = androidx.compose.ui.Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
 
@@ -87,7 +88,7 @@ fun Register(modifier: Modifier = Modifier, onRegister: (String) -> Unit = {}) {
                     onValueChange = { username = it },
                     label = { Text("Nom") },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = utbmBlue) },
-                    modifier = Modifier.fillMaxWidth() ,
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth() ,
                     shape = RoundedCornerShape(12.dp)
                 )
 
@@ -96,43 +97,42 @@ fun Register(modifier: Modifier = Modifier, onRegister: (String) -> Unit = {}) {
                     onValueChange = { email = it },
                     label = { Text("Email") },
                     leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = utbmBlue) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
 
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text("Mot de passe") },
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = utbmBlue) },
                     visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
+
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = androidx.compose.ui.Modifier.height(32.dp))
 
         Button(
-            onClick = { onRegister(username) },
-            modifier = Modifier.fillMaxWidth()
+            onClick = {},
+            modifier = androidx.compose.ui.Modifier.fillMaxWidth()
                 .height(56.dp),
-            enabled = username.isNotBlank() && email.isNotBlank() && password.isNotBlank(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = utbmBlue,
 
-            )
+                )
         )
         {
             Text(
-                text = "S'inscrire",
+                text = "Se connecter",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
         }
     }
+
 }
-
-
