@@ -1,4 +1,4 @@
-package com.example.projet
+package com.example.projet.ui.Register
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
