@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,21 +17,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationScreen(
     chatItem: ChatItem,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    vm: ChatViewModel = viewModel()
 ) {
-    var messages by remember { mutableStateOf(listOf(
-        Message(text = "Salut ! Tu as pu avancer sur le projet SY43 ?", isFromUser = false, time = "10:00"),
-        Message(text = "Oui, j'ai fini la partie UI du chat.", isFromUser = true, time = "10:05"),
-        Message(text = "Top ! Je m'occupe de la base de données alors.", isFromUser = false, time = "10:06"),
-        Message(text = chatItem.lastMessage, isFromUser = false, time = chatItem.time)
-    )) }
+    val messages by vm.getMessages(chatItem.id).collectAsState(initial = emptyList())
+    val listState = rememberLazyListState()
     var newMessageText by remember { mutableStateOf("") }
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
+    }
 
     val utbmBlue = Color(0xFF0055A4)
 
@@ -64,6 +67,7 @@ fun ConversationScreen(
                 .background(Color(0xFFF7F7F7))
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -104,7 +108,7 @@ fun ConversationScreen(
                     IconButton(
                         onClick = {
                             if (newMessageText.isNotBlank()) {
-                                messages = messages + Message(text = newMessageText, isFromUser = true, time = "Maintenant")
+                                vm.sendMessage(chatItem.id, newMessageText)
                                 newMessageText = ""
                             }
                         },

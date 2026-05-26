@@ -22,17 +22,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.projet.data.ChatItem
 import com.example.projet.data.ScheduleParser
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
-import com.example.projet.data.ChatItem
 import com.example.projet.ui.chat.ChatScreen
+import com.example.projet.ui.chat.ChatViewModel
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
 import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
+import com.example.projet.ui.home.PostViewModel
+import com.example.projet.ui.register.UserViewModel
 import com.example.projet.ui.theme.ProjetTheme
 
 enum class Screen {
@@ -63,14 +66,18 @@ private enum class AppState { REGISTER, WELCOME, MAIN }
 
 @Composable
 fun AppRoot() {
+    val userVM: UserViewModel = viewModel()
     var appState by remember { mutableStateOf(AppState.REGISTER) }
     var username by remember { mutableStateOf("") }
 
     when (appState) {
-        AppState.REGISTER -> Register(onRegister = { name ->
-            username = name
-            appState = AppState.WELCOME
-        })
+        AppState.REGISTER -> Register(
+            vm = userVM,
+            onRegistered = { name ->
+                username = name
+                appState = AppState.WELCOME
+            }
+        )
         AppState.WELCOME -> WelcomeScreen(
             username = username,
             onContinue = { appState = AppState.MAIN }
@@ -132,6 +139,8 @@ fun MainApp(username: String = "") {
     var selectedChatItem by remember { mutableStateOf<ChatItem?>(null) }
 
     val agendaVM: AgendaViewModel = viewModel()
+    val chatVM: ChatViewModel = viewModel()
+    val postVM: PostViewModel = viewModel()
 
     val navItems = listOf(
         BottomNavItem(Screen.HOME, "Accueil", Icons.Filled.Home),
@@ -171,7 +180,7 @@ fun MainApp(username: String = "") {
                 onTextRecognized = { text ->
                     recognizedText = text
                     showCamera = false
-                    val events = ScheduleParser.parseScheduleText(text)
+                    agendaVM.addEvents(ScheduleParser.parseScheduleText(text))
                 },
                 onBack = { showCamera = false }
             )
@@ -214,6 +223,7 @@ fun MainApp(username: String = "") {
                 )
                 Screen.CREATE_POST -> CreatePostScreen(
                     onPostCreated = { text, uri ->
+                        postVM.createPost(text, uri?.toString())
                         currentScreen = previousScreen
                     },
                     onBack = {

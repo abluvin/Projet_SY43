@@ -1,66 +1,68 @@
 package com.example.projet.ui.agenda
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.projet.ProjetApplication
 import com.example.projet.data.Event
 import com.example.projet.data.SampleData
+import com.example.projet.data.repository.EventRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 
-class AgendaViewModel : ViewModel() {
+class AgendaViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val importedEvents = mutableListOf<Event>()
+    private val repo = EventRepository(
+        (application as ProjetApplication).database.eventDao()
+    )
 
     private val _weekStart = MutableStateFlow(weekOf(LocalDate.now()))
     val weekStart: StateFlow<LocalDate> = _weekStart.asStateFlow()
 
-    private val _selectedDate = MutableStateFlow(firstDayWithEvents(weekOf(LocalDate.now())))
+    private val _selectedDate = MutableStateFlow(_weekStart.value)
     val selectedDate: StateFlow<LocalDate> = _selectedDate.asStateFlow()
 
-    private val _events = MutableStateFlow<List<Event>>(emptyList())
-    val events: StateFlow<List<Event>> = _events.asStateFlow()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val events: StateFlow<List<Event>> = selectedDate
+        .flatMapLatest { date -> repo.getByDate(date.toString()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    init { refreshEvents() }
+    init {
+        viewModelScope.launch {
+            if (repo.getAll().first().isEmpty()) {
+                repo.insertAll(SampleData.events)
+            }
+        }
+    }
 
     fun selectDate(date: LocalDate) {
         _selectedDate.value = date
-        refreshEvents()
     }
 
     fun nextWeek() {
         _weekStart.value = _weekStart.value.plusWeeks(1)
         _selectedDate.value = _weekStart.value
-        refreshEvents()
     }
 
     fun prevWeek() {
         _weekStart.value = _weekStart.value.minusWeeks(1)
         _selectedDate.value = _weekStart.value
-        refreshEvents()
     }
 
     fun addEvents(newEvents: List<Event>) {
-        importedEvents.addAll(newEvents)
-        refreshEvents()
-    }
-
-    private fun refreshEvents() {
-        val sampleEvents = SampleData.getEventsForDate(_selectedDate.value)
-        val importedForDate = importedEvents.filter { it.date == _selectedDate.value }
-        _events.value = (sampleEvents + importedForDate).sortedBy { it.startTime }
+        viewModelScope.launch { repo.insertAll(newEvents) }
     }
 
     private fun weekOf(date: LocalDate): LocalDate =
         date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-
-    private fun firstDayWithEvents(weekStart: LocalDate): LocalDate {
-        for (i in 0..4) {
-            val d = weekStart.plusDays(i.toLong())
-            if (SampleData.getEventsForDate(d).isNotEmpty() || importedEvents.any { it.date == d }) return d
-        }
-        return weekStart
-    }
 }
