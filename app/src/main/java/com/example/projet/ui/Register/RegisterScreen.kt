@@ -1,4 +1,4 @@
-package com.example.projet
+package com.example.projet.ui.Register
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,10 +21,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.projet.ui.register.UserViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,13 +39,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun Register(modifier: Modifier = Modifier, onRegister: (String) -> Unit = {}) {
+fun Register(
+    modifier: Modifier = Modifier,
+    vm: UserViewModel = viewModel(),
+    onRegistered: (String) -> Unit = {}
+) {
     val utbmBlue = Color(0xFF0055A4)
     val backgroundColor = Color(0xFFF8F9FA)
 
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+
+    val state by vm.registerState.collectAsState()
+    LaunchedEffect(state) {
+        when (val s = state) {
+            is UserViewModel.RegisterState.Success -> onRegistered(s.name)
+            is UserViewModel.RegisterState.EmailExists -> errorMessage = "Cet email est déjà utilisé."
+            else -> {}
+        }
+    }
 
     Column(
 
@@ -114,8 +132,13 @@ fun Register(modifier: Modifier = Modifier, onRegister: (String) -> Unit = {}) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
+        if (errorMessage.isNotBlank()) {
+            Text(errorMessage, color = Color.Red, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Button(
-            onClick = { onRegister(username) },
+            onClick = { vm.register(username, email, password) },
             modifier = Modifier.fillMaxWidth()
                 .height(56.dp),
             enabled = username.isNotBlank() && email.isNotBlank() && password.isNotBlank(),

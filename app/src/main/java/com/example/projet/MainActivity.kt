@@ -26,12 +26,18 @@ import com.example.projet.data.ScheduleParser
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
+import com.example.projet.ui.chat.ChatItem
+import com.example.projet.ui.chat.ChatScreen
+import com.example.projet.ui.chat.ConversationScreen
+import com.example.projet.ui.chat.CourseScreen
+import com.example.projet.ui.chat.NewChatDialog
+import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
 import com.example.projet.ui.sessions.SessionRevisionViewModel
 import com.example.projet.ui.theme.ProjetTheme
 
 enum class Screen {
-    HOME, AGENDA, CHAT, GROUPS, MENU
+    HOME, AGENDA, CHAT, GROUPS, MENU, CREATE_POST, CONVERSATION, COURSE_HUB
 }
 
 data class BottomNavItem(
@@ -117,17 +123,21 @@ fun WelcomeScreen(username: String, onContinue: () -> Unit) {
 @Composable
 fun MainApp(username: String = "") {
     var currentScreen by remember { mutableStateOf(Screen.HOME) }
+    var previousScreen by remember { mutableStateOf(Screen.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
+    var showNewChatDialog by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
     var pasteText by remember { mutableStateOf("") }
+    
+    var selectedChatItem by remember { mutableStateOf<ChatItem?>(null) }
 
     val agendaVM: AgendaViewModel = viewModel()
     val sessionVM: SessionRevisionViewModel = viewModel()
     val userId = "user_${username.lowercase().replace(" ", "_")}"
 
     val navItems = listOf(
-        BottomNavItem(Screen.HOME, "Home", Icons.Filled.Home),
+        BottomNavItem(Screen.HOME, "Accueil", Icons.Filled.Home),
         BottomNavItem(Screen.AGENDA, "Agenda", Icons.Filled.DateRange),
         BottomNavItem(Screen.CHAT, "Chat", Icons.Filled.MoreVert),
         BottomNavItem(Screen.GROUPS, "Révisions", Icons.Filled.Person),
@@ -137,22 +147,24 @@ fun MainApp(username: String = "") {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            NavigationBar(modifier = Modifier.fillMaxWidth()) {
-                navItems.forEach { item ->
-                    NavigationBarItem(
-                        icon = {
-                            Icon(item.icon, contentDescription = item.label)
-                        },
-                        label = {
-                            Text(item.label, style = MaterialTheme.typography.labelSmall)
-                        },
-                        selected = currentScreen == item.screen,
-                        onClick = {
-                            if (!showCamera) {
-                                currentScreen = item.screen
+            if (currentScreen != Screen.CREATE_POST && currentScreen != Screen.CONVERSATION && currentScreen != Screen.COURSE_HUB) {
+                NavigationBar(modifier = Modifier.fillMaxWidth()) {
+                    navItems.forEach { item ->
+                        NavigationBarItem(
+                            icon = {
+                                Icon(item.icon, contentDescription = item.label)
+                            },
+                            label = {
+                                Text(item.label, style = MaterialTheme.typography.labelSmall)
+                            },
+                            selected = currentScreen == item.screen,
+                            onClick = {
+                                if (!showCamera) {
+                                    currentScreen = item.screen
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -163,7 +175,6 @@ fun MainApp(username: String = "") {
                     recognizedText = text
                     showCamera = false
                     val events = ScheduleParser.parseScheduleText(text)
-                    // TODO: Add events to database/storage
                 },
                 onBack = { showCamera = false }
             )
@@ -171,7 +182,11 @@ fun MainApp(username: String = "") {
             when (currentScreen) {
                 Screen.HOME -> HomeScreen(
                     modifier = Modifier.padding(innerPadding),
-                    username = username
+                    username = username,
+                    onCreatePostClick = {
+                        previousScreen = Screen.HOME
+                        currentScreen = Screen.CREATE_POST
+                    }
                 )
                 Screen.AGENDA -> AgendaScreen(
                     modifier = Modifier.padding(innerPadding),
@@ -179,9 +194,18 @@ fun MainApp(username: String = "") {
                     onPasteClick = { showPasteDialog = true },
                     vm = agendaVM
                 )
-                Screen.CHAT -> PlaceholderScreen(
-                    "Chat",
-                    Modifier.padding(innerPadding)
+                Screen.CHAT -> ChatScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    onConversationClick = { chatItem ->
+                        selectedChatItem = chatItem
+                        currentScreen = Screen.CONVERSATION
+                    },
+                    onCourseHubClick = {
+                        currentScreen = Screen.COURSE_HUB
+                    },
+                    onNewChatClick = {
+                        showNewChatDialog = true
+                    }
                 )
                 Screen.GROUPS -> SessionScreen(
                     modifier = Modifier.padding(innerPadding),
@@ -190,10 +214,45 @@ fun MainApp(username: String = "") {
                     vm = sessionVM
                 )
                 Screen.MENU -> PlaceholderScreen(
-                    "Menu",
+                    "Restaurant",
                     Modifier.padding(innerPadding)
                 )
+                Screen.CREATE_POST -> CreatePostScreen(
+                    onPostCreated = { text, uri ->
+                        currentScreen = previousScreen
+                    },
+                    onBack = {
+                        currentScreen = previousScreen
+                    }
+                )
+                Screen.CONVERSATION -> {
+                    selectedChatItem?.let { item ->
+                        ConversationScreen(
+                            chatItem = item,
+                            onBack = { currentScreen = Screen.CHAT }
+                        )
+                    }
+                }
+                Screen.COURSE_HUB -> CourseScreen(
+                    courseName = "SY43 - Plateformes Mobiles",
+                    onBack = { currentScreen = Screen.CHAT }
+                )
             }
+        }
+
+        if (showNewChatDialog) {
+            NewChatDialog(
+                onDismiss = { showNewChatDialog = false },
+                onConfirm = { recipients ->
+                    showNewChatDialog = false
+                    // Logic to start chat or group
+                    if (recipients.size >= 2) {
+                        // Create group logic
+                    } else if (recipients.isNotEmpty()) {
+                        // Start direct chat logic
+                    }
+                }
+            )
         }
 
         if (recognizedText.isNotEmpty()) {
@@ -275,8 +334,7 @@ fun MainApp(username: String = "") {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+                            verticalAlignment = Alignment.CenterVertically) {
                             Button(
                                 onClick = {
                                     showPasteDialog = false
