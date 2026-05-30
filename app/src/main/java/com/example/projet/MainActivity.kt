@@ -33,6 +33,7 @@ import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
 import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
+import com.example.projet.ui.sessions.SessionRevisionViewModel
 import com.example.projet.ui.theme.ProjetTheme
 
 enum class Screen {
@@ -132,13 +133,15 @@ fun MainApp(username: String = "") {
     var selectedChatItem by remember { mutableStateOf<ChatItem?>(null) }
 
     val agendaVM: AgendaViewModel = viewModel()
+    val sessionVM: SessionRevisionViewModel = viewModel()
+    val userId = "user_${username.lowercase().replace(" ", "_")}"
 
     val navItems = listOf(
         BottomNavItem(Screen.HOME, "Accueil", Icons.Filled.Home),
         BottomNavItem(Screen.AGENDA, "Agenda", Icons.Filled.DateRange),
-        BottomNavItem(Screen.CHAT, "Chat", Icons.Filled.Chat),
-        BottomNavItem(Screen.GROUPS, "Groupes", Icons.Filled.Groups),
-        BottomNavItem(Screen.MENU, "Resto", Icons.Filled.Restaurant)
+        BottomNavItem(Screen.CHAT, "Chat", Icons.Filled.MoreVert),
+        BottomNavItem(Screen.GROUPS, "Révisions", Icons.Filled.Person),
+        BottomNavItem(Screen.MENU, "Menu", Icons.Filled.Settings)
     )
 
     Scaffold(
@@ -204,9 +207,11 @@ fun MainApp(username: String = "") {
                         showNewChatDialog = true
                     }
                 )
-                Screen.GROUPS -> PlaceholderScreen(
-                    "Groupes",
-                    Modifier.padding(innerPadding)
+                Screen.GROUPS -> SessionScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    username = username,
+                    userId = userId,
+                    vm = sessionVM
                 )
                 Screen.MENU -> PlaceholderScreen(
                     "Restaurant",
