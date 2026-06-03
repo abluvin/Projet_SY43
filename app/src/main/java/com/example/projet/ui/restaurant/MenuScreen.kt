@@ -1,6 +1,7 @@
 package com.example.projet.ui.restaurant
 
 import androidx.compose.foundation.BorderStroke
+import com.example.projet.ui.components.UtbmLogo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -62,25 +63,11 @@ fun MenuScreen() {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Logo UTBM temporaire
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF334155)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "UTBM",
-                                color = Color.White,
-                                fontSize = 10.dp.value.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
+                        UtbmLogo(iconSize = 32.dp)
+                        Spacer(modifier = Modifier.width(16.dp))
                         Column {
                             Text(
-                                "UTBM Pulse",
+                                "Restaurant",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
                                 color = Color(0xFF0A192F)

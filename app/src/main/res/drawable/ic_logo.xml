@@ -1,0 +1,41 @@
+<svg width="500" height="160" viewBox="0 0 500 160" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <clipPath id="icon-clip">
+      <rect x="0" y="0" width="160" height="160" rx="28"/>
+    </clipPath>
+  </defs>
+
+  <!-- Icône -->
+  <rect x="0" y="0" width="160" height="160" rx="28" fill="#1A57A0"/>
+  <g clip-path="url(#icon-clip)">
+    <polygon points="54,0 82,0 74,160 46,160" fill="#FFFFFF" opacity="0.12"/>
+    <rect x="0"   y="148" width="54" height="12" fill="#4A90D9"/>
+    <rect x="54"  y="148" width="53" height="12" fill="#2ECC71"/>
+    <rect x="107" y="148" width="53" height="12" fill="#8B5CF6"/>
+  </g>
+  <text x="80" y="122"
+        text-anchor="middle"
+        font-family="'Arial Black', 'Helvetica Neue', sans-serif"
+        font-size="108" font-weight="900"
+        fill="#FFFFFF"
+        letter-spacing="-4">U</text>
+
+  <!-- UTBM -->
+  <text x="178" y="78"
+        font-family="'Arial Black', 'Helvetica Neue', sans-serif"
+        font-size="72" font-weight="900"
+        fill="#1A57A0"
+        letter-spacing="-2">UTBM</text>
+
+  <!-- Barre symétrique -->
+  <rect x="170" y="87" width="246" height="3.5" fill="#1A57A0"/>
+
+  <!-- connect -->
+  <text x="180" y="126"
+        font-family="'Helvetica Neue', Arial, sans-serif"
+        font-size="32" font-weight="300"
+        fill="#1A57A0"
+        letter-spacing="10">connect</text>
+
+</svg>

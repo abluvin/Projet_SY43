@@ -27,6 +27,7 @@ import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
 import com.example.projet.data.ChatItem
+import com.example.projet.ui.Register.Connexion
 import com.example.projet.ui.Register.Register
 import com.example.projet.ui.chat.ChatScreen
 import com.example.projet.ui.chat.ConversationScreen
@@ -34,6 +35,7 @@ import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
 import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
+import com.example.projet.ui.home.PostViewModel
 import com.example.projet.ui.sessions.CollaborationViewModel
 import com.example.projet.ui.theme.ProjetTheme
 
@@ -61,23 +63,36 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class AppState { REGISTER, WELCOME, MAIN }
+private enum class AppState { LOGIN, REGISTER, WELCOME, MAIN }
 
 @Composable
 fun AppRoot() {
-    var appState by remember { mutableStateOf(AppState.REGISTER) }
+    var appState by remember { mutableStateOf(AppState.LOGIN) }
     var username by remember { mutableStateOf("") }
+    var userId by remember { mutableStateOf(0) }
 
     when (appState) {
-        AppState.REGISTER -> Register(onRegistered = { name ->
-            username = name
-            appState = AppState.WELCOME
-        })
+        AppState.LOGIN -> Connexion(
+            onLoggedIn = { name, id ->
+                username = name
+                userId = id
+                appState = AppState.MAIN
+            },
+            onNavigateToRegister = { appState = AppState.REGISTER }
+        )
+        AppState.REGISTER -> Register(
+            onRegistered = { name, id ->
+                username = name
+                userId = id
+                appState = AppState.WELCOME
+            },
+            onNavigateToLogin = { appState = AppState.LOGIN }
+        )
         AppState.WELCOME -> WelcomeScreen(
             username = username,
             onContinue = { appState = AppState.MAIN }
         )
-        AppState.MAIN -> MainApp(username = username)
+        AppState.MAIN -> MainApp(username = username, userId = userId)
     }
 }
 
@@ -122,7 +137,7 @@ fun WelcomeScreen(username: String, onContinue: () -> Unit) {
 }
 
 @Composable
-fun MainApp(username: String = "") {
+fun MainApp(username: String = "", userId: Int = 0) {
     var currentScreen by remember { mutableStateOf(Screen.HOME) }
     var previousScreen by remember { mutableStateOf(Screen.HOME) }
     var showCamera by remember { mutableStateOf(false) }
@@ -130,19 +145,20 @@ fun MainApp(username: String = "") {
     var showNewChatDialog by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
     var pasteText by remember { mutableStateOf("") }
-    
+
     var selectedChatItem by remember { mutableStateOf<ChatItem?>(null) }
 
     val agendaVM: AgendaViewModel = viewModel()
     val collaborationVM: CollaborationViewModel = viewModel()
-    val userId = "user_${username.lowercase().replace(" ", "_")}"
+    val postVM: PostViewModel = viewModel()
+    val collaborationUserId = "user_${username.lowercase().replace(" ", "_")}"
 
     val navItems = listOf(
         BottomNavItem(Screen.HOME, "Accueil", Icons.Filled.Home),
-        BottomNavItem(Screen.AGENDA, "Agenda", Icons.Filled.DateRange),
-        BottomNavItem(Screen.CHAT, "Chat", Icons.Filled.MoreVert),
-        BottomNavItem(Screen.GROUPS, "Collaboration", Icons.Filled.Groups),
-        BottomNavItem(Screen.MENU, "Menu", Icons.Filled.Settings)
+        BottomNavItem(Screen.AGENDA, "Agenda", Icons.Filled.CalendarMonth),
+        BottomNavItem(Screen.CHAT, "Chat", Icons.Filled.Forum),
+        BottomNavItem(Screen.GROUPS, "Collab", Icons.Filled.Groups),
+        BottomNavItem(Screen.MENU, "Restaurant", Icons.Filled.Restaurant)
     )
 
     Scaffold(
@@ -184,6 +200,8 @@ fun MainApp(username: String = "") {
                 Screen.HOME -> HomeScreen(
                     modifier = Modifier.padding(innerPadding),
                     username = username,
+                    currentUserId = userId,
+                    postVm = postVM,
                     onCreatePostClick = {
                         previousScreen = Screen.HOME
                         currentScreen = Screen.CREATE_POST
@@ -211,7 +229,7 @@ fun MainApp(username: String = "") {
                 Screen.GROUPS -> CollaborationScreen(
                     modifier = Modifier.padding(innerPadding),
                     username = username,
-                    userId = userId,
+                    userId = collaborationUserId,
                     vm = collaborationVM
                 )
                 Screen.MENU -> PlaceholderScreen(
@@ -220,6 +238,7 @@ fun MainApp(username: String = "") {
                 )
                 Screen.CREATE_POST -> CreatePostScreen(
                     onPostCreated = { text, uri ->
+                        postVM.createPost(text, uri?.toString(), userId)
                         currentScreen = previousScreen
                     },
                     onBack = {
