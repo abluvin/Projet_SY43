@@ -1,63 +1,85 @@
 package com.example.projet.ui.sessions
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.projet.ProjetApplication
 import com.example.projet.data.CampusType
-import com.example.projet.data.SessionRevision
+import com.example.projet.data.Collaboration
+import com.example.projet.data.repository.CollaborationRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.UUID
 
-class SessionRevisionViewModel : ViewModel() {
+class CollaborationViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _sessions = MutableStateFlow(sampleSessions())
-    val sessions: StateFlow<List<SessionRevision>> = _sessions.asStateFlow()
+    private val repo = CollaborationRepository(
+        (application as ProjetApplication).database.collaborationDao()
+    )
+
+    val collaborations: StateFlow<List<Collaboration>> = repo.getAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _filterCampus = MutableStateFlow<CampusType?>(null)
     val filterCampus: StateFlow<CampusType?> = _filterCampus.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            if (repo.count() == 0) {
+                sampleCollaborations().forEach { repo.insert(it) }
+            }
+        }
+    }
 
     fun setFilterCampus(campus: CampusType?) {
         _filterCampus.value = campus
     }
 
-    fun createSession(session: SessionRevision) {
-        _sessions.value = _sessions.value + session
+    fun createCollaboration(collaboration: Collaboration) {
+        viewModelScope.launch { repo.insert(collaboration) }
     }
 
-    fun joinSession(sessionId: String, userId: String, userName: String) {
-        _sessions.value = _sessions.value.map { session ->
-            if (session.id == sessionId &&
-                session.participantIds.size < session.maxParticipants &&
-                !session.participantIds.contains(userId)
-            ) {
-                val newIds = session.participantIds + userId
-                session.copy(
+    fun joinCollaboration(collaborationId: String, userId: String, userName: String) {
+        viewModelScope.launch {
+            val current = collaborations.value.find { it.id == collaborationId } ?: return@launch
+            if (current.participantIds.contains(userId)) return@launch
+            if (current.participantIds.size >= current.maxParticipants) return@launch
+            val newIds = current.participantIds + userId
+            repo.update(
+                current.copy(
                     participantIds = newIds,
-                    participantNames = session.participantNames + userName,
-                    status = if (newIds.size >= session.maxParticipants) "FULL" else "OPEN"
+                    participantNames = current.participantNames + userName,
+                    status = if (newIds.size >= current.maxParticipants) "FULL" else "OPEN"
                 )
-            } else session
+            )
         }
     }
 
-    fun leaveSession(sessionId: String, userId: String) {
-        _sessions.value = _sessions.value.map { session ->
-            if (session.id == sessionId && session.participantIds.contains(userId)) {
-                val idx = session.participantIds.indexOf(userId)
-                session.copy(
-                    participantIds = session.participantIds.toMutableList().also { it.removeAt(idx) },
-                    participantNames = session.participantNames.toMutableList().also { it.removeAt(idx) },
+    fun leaveCollaboration(collaborationId: String, userId: String) {
+        viewModelScope.launch {
+            val current = collaborations.value.find { it.id == collaborationId } ?: return@launch
+            if (!current.participantIds.contains(userId)) return@launch
+            val idx = current.participantIds.indexOf(userId)
+            repo.update(
+                current.copy(
+                    participantIds = current.participantIds.toMutableList().also { it.removeAt(idx) },
+                    participantNames = current.participantNames.toMutableList().also { it.removeAt(idx) },
                     status = "OPEN"
                 )
-            } else session
+            )
         }
     }
 
-    private fun sampleSessions() = listOf(
-        SessionRevision(
-            id = "1",
-            seance_name = "Révision SY43 – Modélisation UML",
+    private fun sampleCollaborations() = listOf(
+        Collaboration(
+            id = UUID.randomUUID().toString(),
+            name = "Révision SY43 – Modélisation UML",
             ue = "SY43",
             description = "Révision des diagrammes de classes et de séquence avant le partiel.",
             campus = CampusType.SEVENANS,
@@ -72,9 +94,9 @@ class SessionRevisionViewModel : ViewModel() {
             endTime = LocalTime.of(16, 0),
             maxParticipants = 6
         ),
-        SessionRevision(
-            id = "2",
-            seance_name = "TD MA50 – Analyse numérique",
+        Collaboration(
+            id = UUID.randomUUID().toString(),
+            name = "TD MA50 – Analyse numérique",
             ue = "MA50",
             description = "Exercices sur les méthodes d'intégration numérique et équations différentielles.",
             campus = CampusType.SEVENANS,
@@ -89,9 +111,9 @@ class SessionRevisionViewModel : ViewModel() {
             endTime = LocalTime.of(12, 0),
             maxParticipants = 8
         ),
-        SessionRevision(
-            id = "3",
-            seance_name = "TP LO43 – Prolog",
+        Collaboration(
+            id = UUID.randomUUID().toString(),
+            name = "TP LO43 – Prolog",
             ue = "LO43",
             description = "Aide sur les TP Prolog, amenez votre ordinateur !",
             campus = CampusType.BELFORT,
@@ -106,9 +128,9 @@ class SessionRevisionViewModel : ViewModel() {
             endTime = LocalTime.of(18, 0),
             maxParticipants = 5
         ),
-        SessionRevision(
-            id = "4",
-            seance_name = "Révision HM40 – Histoire des sciences",
+        Collaboration(
+            id = UUID.randomUUID().toString(),
+            name = "Révision HM40 – Histoire des sciences",
             ue = "HM40",
             description = "Préparation à l'examen oral : grandes dates et inventions marquantes.",
             campus = CampusType.MONTBELLIARD,

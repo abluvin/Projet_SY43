@@ -1,7 +1,9 @@
 package com.example.projet.data
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import java.time.LocalDate
 import java.time.LocalTime
-
 
 enum class CampusType(val label: String) {
     SEVENANS("SEVENANS"),
@@ -10,12 +12,14 @@ enum class CampusType(val label: String) {
     AUTRE("AUTRE")
 }
 
-data class SessionRevision (
+@Entity(tableName = "collaborations")
+data class Collaboration(
+    @PrimaryKey
     val id: String,
-    val seance_name: String,
-    val ue : String,
-    val description : String,
-    val campus : CampusType,
+    val name: String,
+    val ue: String,
+    val description: String,
+    val campus: CampusType,
     val room: String,
     val creatorId: String = "",
     val creatorName: String = "",

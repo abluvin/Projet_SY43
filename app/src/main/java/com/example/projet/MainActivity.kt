@@ -26,14 +26,15 @@ import com.example.projet.data.ScheduleParser
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
-import com.example.projet.ui.chat.ChatItem
+import com.example.projet.data.ChatItem
+import com.example.projet.ui.Register.Register
 import com.example.projet.ui.chat.ChatScreen
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
 import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
-import com.example.projet.ui.sessions.SessionRevisionViewModel
+import com.example.projet.ui.sessions.CollaborationViewModel
 import com.example.projet.ui.theme.ProjetTheme
 
 enum class Screen {
@@ -68,7 +69,7 @@ fun AppRoot() {
     var username by remember { mutableStateOf("") }
 
     when (appState) {
-        AppState.REGISTER -> Register(onRegister = { name ->
+        AppState.REGISTER -> Register(onRegistered = { name ->
             username = name
             appState = AppState.WELCOME
         })
@@ -133,14 +134,14 @@ fun MainApp(username: String = "") {
     var selectedChatItem by remember { mutableStateOf<ChatItem?>(null) }
 
     val agendaVM: AgendaViewModel = viewModel()
-    val sessionVM: SessionRevisionViewModel = viewModel()
+    val collaborationVM: CollaborationViewModel = viewModel()
     val userId = "user_${username.lowercase().replace(" ", "_")}"
 
     val navItems = listOf(
         BottomNavItem(Screen.HOME, "Accueil", Icons.Filled.Home),
         BottomNavItem(Screen.AGENDA, "Agenda", Icons.Filled.DateRange),
         BottomNavItem(Screen.CHAT, "Chat", Icons.Filled.MoreVert),
-        BottomNavItem(Screen.GROUPS, "Révisions", Icons.Filled.Person),
+        BottomNavItem(Screen.GROUPS, "Collaboration", Icons.Filled.Groups),
         BottomNavItem(Screen.MENU, "Menu", Icons.Filled.Settings)
     )
 
@@ -207,11 +208,11 @@ fun MainApp(username: String = "") {
                         showNewChatDialog = true
                     }
                 )
-                Screen.GROUPS -> SessionScreen(
+                Screen.GROUPS -> CollaborationScreen(
                     modifier = Modifier.padding(innerPadding),
                     username = username,
                     userId = userId,
-                    vm = sessionVM
+                    vm = collaborationVM
                 )
                 Screen.MENU -> PlaceholderScreen(
                     "Restaurant",

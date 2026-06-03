@@ -1,3 +1,4 @@
+
 package com.example.projet
 
 import android.content.Intent
@@ -25,8 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.CampusType
-import com.example.projet.data.SessionRevision
-import com.example.projet.ui.sessions.SessionRevisionViewModel
+import com.example.projet.data.Collaboration
+import com.example.projet.ui.sessions.CollaborationViewModel
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -45,18 +46,18 @@ private fun ueColor(code: String): Color = when {
 }
 
 @Composable
-fun SessionScreen(
+fun CollaborationScreen(
     modifier: Modifier = Modifier,
     username: String = "",
     userId: String = "user_me",
-    vm: SessionRevisionViewModel = viewModel()
+    vm: CollaborationViewModel = viewModel()
 ) {
-    val sessions by vm.sessions.collectAsState()
+    val collaborations by vm.collaborations.collectAsState()
     val filterCampus by vm.filterCampus.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
-    var selectedSession by remember { mutableStateOf<SessionRevision?>(null) }
+    var selectedCollab by remember { mutableStateOf<Collaboration?>(null) }
 
-    val filtered = sessions.filter { filterCampus == null || it.campus == filterCampus }
+    val filtered = collaborations.filter { filterCampus == null || it.campus == filterCampus }
 
     LazyColumn(
         modifier = modifier
@@ -73,7 +74,7 @@ fun SessionScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Séances de révision",
+                        text = "Collaboration",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
@@ -127,7 +128,7 @@ fun SessionScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Aucune séance pour ce campus",
+                        text = "Aucune collaboration pour ce campus",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -135,13 +136,13 @@ fun SessionScreen(
             }
         }
 
-        items(filtered, key = { it.id }) { session ->
-            SessionCard(
-                session = session,
+        items(filtered, key = { it.id }) { collab ->
+            CollaborationCard(
+                collab = collab,
                 userId = userId,
-                onJoin = { vm.joinSession(session.id, userId, username) },
-                onLeave = { vm.leaveSession(session.id, userId) },
-                onDetails = { selectedSession = session }
+                onJoin = { vm.joinCollaboration(collab.id, userId, username) },
+                onLeave = { vm.leaveCollaboration(collab.id, userId) },
+                onDetails = { selectedCollab = collab }
             )
             Spacer(Modifier.height(8.dp))
         }
@@ -149,23 +150,23 @@ fun SessionScreen(
         item { Spacer(Modifier.height(16.dp)) }
     }
 
-    selectedSession?.let { session ->
-        SessionDetailDialog(
-            session = session,
+    selectedCollab?.let { collab ->
+        CollaborationDetailDialog(
+            collab = collab,
             userId = userId,
-            onDismiss = { selectedSession = null },
-            onJoin = { vm.joinSession(session.id, userId, username); selectedSession = null },
-            onLeave = { vm.leaveSession(session.id, userId); selectedSession = null }
+            onDismiss = { selectedCollab = null },
+            onJoin = { vm.joinCollaboration(collab.id, userId, username); selectedCollab = null },
+            onLeave = { vm.leaveCollaboration(collab.id, userId); selectedCollab = null }
         )
     }
 
     if (showCreateDialog) {
-        CreateSessionDialog(
+        CreateCollaborationDialog(
             username = username,
             userId = userId,
             onDismiss = { showCreateDialog = false },
-            onCreate = { session ->
-                vm.createSession(session)
+            onCreate = { collab ->
+                vm.createCollaboration(collab)
                 showCreateDialog = false
             }
         )
@@ -173,18 +174,18 @@ fun SessionScreen(
 }
 
 @Composable
-private fun SessionCard(
-    session: SessionRevision,
+private fun CollaborationCard(
+    collab: Collaboration,
     userId: String,
     onJoin: () -> Unit,
     onLeave: () -> Unit,
     onDetails: () -> Unit
 ) {
     val context = LocalContext.current
-    val color = ueColor(session.ue)
-    val isJoined = session.participantIds.contains(userId)
-    val isFull = session.status == "FULL"
-    val isCreator = session.creatorId == userId
+    val color = ueColor(collab.ue)
+    val isJoined = collab.participantIds.contains(userId)
+    val isFull = collab.status == "FULL"
+    val isCreator = collab.creatorId == userId
     val dateFmt = DateTimeFormatter.ofPattern("EEE d MMM", Locale.FRENCH)
     val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -215,7 +216,7 @@ private fun SessionCard(
                     verticalAlignment = Alignment.Top
                 ) {
                     Text(
-                        text = session.seance_name,
+                        text = collab.name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f)
@@ -225,7 +226,7 @@ private fun SessionCard(
                         color = color.copy(alpha = 0.15f)
                     ) {
                         Text(
-                            text = session.ue,
+                            text = collab.ue,
                             style = MaterialTheme.typography.labelSmall,
                             color = color,
                             fontWeight = FontWeight.Bold,
@@ -237,7 +238,7 @@ private fun SessionCard(
                 Spacer(Modifier.height(6.dp))
 
                 Text(
-                    text = session.description,
+                    text = collab.description,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2
@@ -246,7 +247,7 @@ private fun SessionCard(
                 Spacer(Modifier.height(8.dp))
 
                 Text(
-                    text = "${session.date.format(dateFmt)}  •  ${session.startTime.format(timeFmt)}–${session.endTime.format(timeFmt)}  •  ${session.campus.label} ${session.room}",
+                    text = "${collab.date.format(dateFmt)}  •  ${collab.startTime.format(timeFmt)}–${collab.endTime.format(timeFmt)}  •  ${collab.campus.label} ${collab.room}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -267,7 +268,7 @@ private fun SessionCard(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            text = "${session.participantIds.size}/${session.maxParticipants}",
+                            text = "${collab.participantIds.size}/${collab.maxParticipants}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -276,17 +277,17 @@ private fun SessionCard(
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         IconButton(
                             onClick = {
-                                val texte = "Séance : ${session.seance_name}\n" +
-                                    "UV : ${session.ue}\n" +
-                                    "Date : ${session.date.format(dateFmt)}\n" +
-                                    "Horaires : ${session.startTime.format(timeFmt)}–${session.endTime.format(timeFmt)}\n" +
-                                    "Salle : ${session.campus.label} ${session.room}\n" +
-                                    "Organisateur : ${session.creatorName}"
+                                val texte = "Collaboration : ${collab.name}\n" +
+                                    "UV : ${collab.ue}\n" +
+                                    "Date : ${collab.date.format(dateFmt)}\n" +
+                                    "Horaires : ${collab.startTime.format(timeFmt)}–${collab.endTime.format(timeFmt)}\n" +
+                                    "Salle : ${collab.campus.label} ${collab.room}\n" +
+                                    "Organisateur : ${collab.creatorName}"
                                 val intent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
                                     putExtra(Intent.EXTRA_TEXT, texte)
                                 }
-                                context.startActivity(Intent.createChooser(intent, "Partager la séance"))
+                                context.startActivity(Intent.createChooser(intent, "Partager la collaboration"))
                             },
                             modifier = Modifier.size(30.dp)
                         ) {
@@ -330,30 +331,30 @@ private fun SessionCard(
 }
 
 @Composable
-private fun SessionDetailDialog(
-    session: SessionRevision,
+private fun CollaborationDetailDialog(
+    collab: Collaboration,
     userId: String,
     onDismiss: () -> Unit,
     onJoin: () -> Unit,
     onLeave: () -> Unit
 ) {
-    val isJoined = session.participantIds.contains(userId)
-    val isFull = session.status == "FULL"
-    val isCreator = session.creatorId == userId
+    val isJoined = collab.participantIds.contains(userId)
+    val isFull = collab.status == "FULL"
+    val isCreator = collab.creatorId == userId
     val dateFmt = DateTimeFormatter.ofPattern("EEE d MMM", Locale.FRENCH)
     val timeFmt = DateTimeFormatter.ofPattern("HH:mm")
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(session.seance_name) },
+        title = { Text(collab.name) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("${session.ue}  •  ${session.date.format(dateFmt)}  •  ${session.startTime.format(timeFmt)}–${session.endTime.format(timeFmt)}")
-                Text("${session.campus.label}, salle ${session.room}")
-                Text("Organisé par ${session.creatorName}")
+                Text("${collab.ue}  •  ${collab.date.format(dateFmt)}  •  ${collab.startTime.format(timeFmt)}–${collab.endTime.format(timeFmt)}")
+                Text("${collab.campus.label}, salle ${collab.room}")
+                Text("Organisé par ${collab.creatorName}")
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "${session.participantNames.joinToString(", ")}  (${session.participantIds.size}/${session.maxParticipants})",
+                    "${collab.participantNames.joinToString(", ")}  (${collab.participantIds.size}/${collab.maxParticipants})",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -378,11 +379,11 @@ private fun SessionDetailDialog(
 }
 
 @Composable
-private fun CreateSessionDialog(
+private fun CreateCollaborationDialog(
     username: String,
     userId: String,
     onDismiss: () -> Unit,
-    onCreate: (SessionRevision) -> Unit
+    onCreate: (Collaboration) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var ue by remember { mutableStateOf("") }
@@ -411,7 +412,7 @@ private fun CreateSessionDialog(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Nouvelle séance",
+                        text = "Nouvelle collaboration",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -419,7 +420,7 @@ private fun CreateSessionDialog(
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Nom de la séance *") },
+                        label = { Text("Nom de la collaboration *") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true
@@ -536,9 +537,9 @@ private fun CreateSessionDialog(
                                 if (date == null) { dateError = true; return@Button }
                                 if (start == null || end == null) { timeError = true; return@Button }
                                 onCreate(
-                                    SessionRevision(
+                                    Collaboration(
                                         id = UUID.randomUUID().toString(),
-                                        seance_name = name.trim(),
+                                        name = name.trim(),
                                         ue = ue.trim(),
                                         description = description.trim(),
                                         campus = campus,
