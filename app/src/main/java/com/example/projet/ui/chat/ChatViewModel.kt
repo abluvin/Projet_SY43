@@ -33,6 +33,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     fun getMessages(chatItemId: Int): Flow<List<Message>> = repo.getMessages(chatItemId)
 
+    fun getChatItem(id: Int): Flow<ChatItem?> = repo.getChatItem(id)
+
+    fun getLastMessage(chatItemId: Int): Flow<String?> = repo.getLastMessage(chatItemId)
+
     fun sendMessage(chatItemId: Int, text: String) {
         viewModelScope.launch {
             val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))

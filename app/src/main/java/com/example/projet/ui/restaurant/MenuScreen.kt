@@ -18,20 +18,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -94,43 +86,7 @@ fun MenuScreen() {
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
-        },
-        bottomBar = {
-            NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    icon = { Icon(Icons.Default.Home, "Home") },
-                    label = { Text("HOME") })
-                NavigationBarItem(
-                    selected = true,
-                    onClick = {},
-                    icon = { Icon(Icons.Outlined.CalendarMonth, "Agenda") },
-                    label = { Text("AGENDA") },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = UtbmBlue,
-                        selectedTextColor = UtbmBlue,
-                        indicatorColor = BadgeVeganBg
-                    )
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    icon = { Icon(Icons.Outlined.ChatBubbleOutline, "Chat") },
-                    label = { Text("CHAT") })
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    icon = { Icon(Icons.Default.People, "Groups") },
-                    label = { Text("GROUPS") })
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    icon = { Icon(Icons.Default.Menu, "Menu") },
-                    label = { Text("MENU") })
-            }
         }
-
     ) {
         innerPadding ->
         LazyColumn(

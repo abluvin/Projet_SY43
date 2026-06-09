@@ -33,6 +33,11 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -212,68 +217,78 @@ fun PostBloc(
                 }
             }
 
-            if (expanded) {
-                Row(
-                    modifier = Modifier.padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Filled.Favorite, contentDescription = "Like", tint = Color.White)
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Filled.Favorite, contentDescription = "Like", tint = Color.White)
+                        }
+                        IconButton(onClick = { showComments = !showComments }) {
+                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Commentaires", tint = Color.White)
+                        }
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Filled.Share, contentDescription = "Partager", tint = Color.White)
+                        }
                     }
-                    IconButton(onClick = { showComments = !showComments }) {
-                        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Commentaires", tint = Color.White)
-                    }
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Filled.Share, contentDescription = "Partager", tint = Color.White)
-                    }
-                }
 
-                if (showComments) {
-                    Column(modifier = Modifier.padding(top = 16.dp)) {
-                        if (comments.isEmpty()) {
-                            Text(
-                                text = "Aucun commentaire. Soyez le premier !",
-                                color = Color.White.copy(alpha = 0.6f),
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        } else {
-                            comments.forEach { comment ->
+                    AnimatedVisibility(
+                        visible = showComments,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(modifier = Modifier.padding(top = 16.dp)) {
+                            if (comments.isEmpty()) {
                                 Text(
-                                    text = "• ${comment.content}",
-                                    color = Color.White,
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    text = "Aucun commentaire. Soyez le premier !",
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    fontSize = 13.sp,
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(
-                                value = newCommentText,
-                                onValueChange = { newCommentText = it },
-                                modifier = Modifier.weight(1f),
-                                placeholder = {
-                                    Text("Ajouter un commentaire...", color = Color.White.copy(alpha = 0.6f))
-                                },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color.White,
-                                    unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
-                                    cursorColor = Color.White,
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White
-                                ),
-                                textStyle = MaterialTheme.typography.bodySmall
-                            )
-                            IconButton(onClick = {
-                                if (newCommentText.isNotBlank()) {
-                                    vm.addComment(post.id, currentUserId, newCommentText)
-                                    newCommentText = ""
+                            } else {
+                                comments.forEach { comment ->
+                                    Text(
+                                        text = "• ${comment.content}",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
                                 }
-                            }) {
-                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Envoyer", tint = Color.White)
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(
+                                    value = newCommentText,
+                                    onValueChange = { newCommentText = it },
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = {
+                                        Text("Ajouter un commentaire...", color = Color.White.copy(alpha = 0.6f))
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color.White,
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
+                                        cursorColor = Color.White,
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White
+                                    ),
+                                    textStyle = MaterialTheme.typography.bodySmall
+                                )
+                                IconButton(onClick = {
+                                    if (newCommentText.isNotBlank()) {
+                                        vm.addComment(post.id, currentUserId, newCommentText)
+                                        newCommentText = ""
+                                    }
+                                }) {
+                                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Envoyer", tint = Color.White)
+                                }
                             }
                         }
                     }

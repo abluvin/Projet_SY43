@@ -22,6 +22,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import com.example.projet.ui.components.UtbmLogo
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -129,9 +134,15 @@ fun Connexion(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (errorMessage.isNotBlank()) {
-            Text(errorMessage, color = Color.Red, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(8.dp))
+        AnimatedVisibility(
+            visible = errorMessage.isNotBlank(),
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Column {
+                Text(errorMessage, color = Color.Red, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
 
         Button(

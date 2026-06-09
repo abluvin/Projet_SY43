@@ -102,7 +102,12 @@ fun ChatScreen(
 
                 // Chat List
                 items(filteredItems) { item ->
-                    ChatListItem(item, onClick = { onConversationClick(item) })
+                    val lastMsg by vm.getLastMessage(item.id).collectAsState(initial = item.lastMessage)
+                    ChatListItem(
+                        item = item,
+                        lastMessage = lastMsg ?: item.lastMessage,
+                        onClick = { onConversationClick(item) }
+                    )
                 }
             }
         }
@@ -251,7 +256,7 @@ fun CourseHubCard(onClick: () -> Unit) {
 }
 
 @Composable
-fun ChatListItem(item: ChatItem, onClick: () -> Unit) {
+fun ChatListItem(item: ChatItem, lastMessage: String, onClick: () -> Unit) {
     val utbmBlue = Color(0xFF0055A4)
     Surface(
         onClick = onClick,
@@ -331,7 +336,7 @@ fun ChatListItem(item: ChatItem, onClick: () -> Unit) {
                         Text("A envoyé une photo", color = Color.Gray, fontSize = 14.sp)
                     } else {
                         Text(
-                            text = item.lastMessage,
+                            text = lastMessage,
                             color = if (item.unreadCount > 0) Color.Black else Color.Gray,
                             fontSize = 14.sp,
                             maxLines = 1,
