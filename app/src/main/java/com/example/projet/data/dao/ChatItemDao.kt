@@ -10,6 +10,9 @@ interface ChatItemDao {
     @Query("SELECT * FROM chat_item ORDER BY time DESC")
     fun getAll(): Flow<List<ChatItem>>
 
+    @Query("SELECT * FROM chat_item WHERE id = :id")
+    fun getById(id: Int): Flow<ChatItem?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(chatItem: ChatItem)
 
