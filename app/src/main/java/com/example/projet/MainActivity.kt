@@ -22,11 +22,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.projet.data.ChatItem
 import com.example.projet.data.ScheduleParser
+import com.example.projet.ui.Register.Register
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
-import com.example.projet.ui.chat.ChatItem
+
 import com.example.projet.ui.chat.ChatScreen
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
@@ -54,6 +56,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             ProjetTheme {
                 AppRoot()
+
+
             }
         }
     }
@@ -67,7 +71,7 @@ fun AppRoot() {
     var username by remember { mutableStateOf("") }
 
     when (appState) {
-        AppState.REGISTER -> Register(onRegister = { name ->
+        AppState.REGISTER -> Register(onRegistered = { name ->
             username = name
             appState = AppState.WELCOME
         })
