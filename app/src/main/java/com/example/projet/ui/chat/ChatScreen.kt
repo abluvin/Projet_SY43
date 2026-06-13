@@ -116,19 +116,21 @@ fun ChatScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // Hub de cours
-                item {
-                    CourseHubCard(onClick = onCourseHubClick)
-                }
-
-                // Chat List
                 items(filteredItems) { item ->
                     val lastMsg by vm.getLastMessage(item.id).collectAsState(initial = item.lastMessage)
-                    ChatListItem(
-                        item = item,
-                        lastMessage = lastMsg ?: item.lastMessage,
-                        onClick = { onConversationClick(item) }
-                    )
+                    if (item.isCourse) {
+                        CourseHubCard(
+                            item = item,
+                            lastMessage = lastMsg ?: item.lastMessage,
+                            onClick = { onConversationClick(item) }
+                        )
+                    } else {
+                        ChatListItem(
+                            item = item,
+                            lastMessage = lastMsg ?: item.lastMessage,
+                            onClick = { onConversationClick(item) }
+                        )
+                    }
                 }
             }
         }
@@ -242,75 +244,54 @@ fun FilterChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CourseHubCard(onClick: () -> Unit) {
+fun CourseHubCard(item: com.example.projet.data.ChatItem, lastMessage: String, onClick: () -> Unit) {
     val utbmBlue = Color(0xFF0055A4)
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = utbmBlue)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Info,
+                    imageVector = Icons.Default.School,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    tint = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "HUB DE COURS",
                     color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = item.time,
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 11.sp
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "SY43",
-                        color = Color.White,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Professeur : 14 nouveaux documents partagés",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 14.sp
-                    )
-                }
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(2) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color.LightGray)
-                                .offset(x = (it * (-8)).dp)
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF8AB4F8))
-                            .offset(x = (-16).dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("+12", color = utbmBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+            Text(
+                text = item.name,
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = lastMessage,
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
         }
     }
 }

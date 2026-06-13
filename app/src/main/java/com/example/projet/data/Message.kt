@@ -21,5 +21,6 @@ data class Message(
     val chatItemId: Int = 0,
     val text: String,
     val isFromUser: Boolean,
-    val time: String
+    val time: String,
+    val isAnnouncement: Boolean = false
 )

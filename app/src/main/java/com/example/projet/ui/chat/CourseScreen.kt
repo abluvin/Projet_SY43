@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,10 +32,12 @@ fun CourseScreen(
 ) {
     val utbmBlue = Color(0xFF0055A4)
     val profColor = Color(0xFF34A853)
+    val announcementColor = Color(0xFFE65100)
 
     val chatItem by vm.getChatItem(chatItemId).collectAsState(initial = null)
     val messages by vm.getMessages(chatItemId).collectAsState(initial = emptyList())
     var inputText by remember { mutableStateOf("") }
+    var isAnnouncementMode by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(messages.size) {
@@ -99,7 +103,12 @@ fun CourseScreen(
 
                 if (messages.isEmpty()) {
                     item {
-                        Box(modifier = Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
                                 "Aucune annonce pour l'instant.",
                                 color = Color.Gray,
@@ -109,7 +118,11 @@ fun CourseScreen(
                     }
                 } else {
                     items(messages) { message ->
-                        HubMessageCard(message = message)
+                        if (message.isAnnouncement) {
+                            AnnouncementCard(message = message)
+                        } else {
+                            HubMessageCard(message = message)
+                        }
                     }
                 }
             }
@@ -121,37 +134,89 @@ fun CourseScreen(
                 color = Color.White
             ) {
                 if (isProf) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                             .navigationBarsPadding()
                             .imePadding()
-                            .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        OutlinedTextField(
-                            value = inputText,
-                            onValueChange = { inputText = it },
-                            placeholder = { Text("Envoyer une annonce...") },
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(24.dp),
-                            maxLines = 3
-                        )
-                        IconButton(
-                            onClick = {
-                                if (inputText.isNotBlank()) {
-                                    vm.sendMessage(chatItemId, inputText.trim())
-                                    inputText = ""
-                                }
-                            },
-                            enabled = inputText.isNotBlank()
+                        // Mode toggle
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Envoyer",
-                                tint = if (inputText.isNotBlank()) profColor else Color.Gray
+                            FilterChip(
+                                selected = !isAnnouncementMode,
+                                onClick = { isAnnouncementMode = false },
+                                label = { Text("Message", fontSize = 12.sp) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Chat, contentDescription = null, modifier = Modifier.size(14.dp))
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = profColor,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White
+                                )
                             )
+                            FilterChip(
+                                selected = isAnnouncementMode,
+                                onClick = { isAnnouncementMode = true },
+                                label = { Text("Annonce globale", fontSize = 12.sp) },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Campaign, contentDescription = null, modifier = Modifier.size(14.dp))
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = announcementColor,
+                                    selectedLabelColor = Color.White,
+                                    selectedLeadingIconColor = Color.White
+                                )
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = inputText,
+                                onValueChange = { inputText = it },
+                                placeholder = {
+                                    Text(
+                                        if (isAnnouncementMode) "Écrire une annonce visible par tous..."
+                                        else "Envoyer un message..."
+                                    )
+                                },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(24.dp),
+                                maxLines = 3,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = if (isAnnouncementMode) announcementColor else profColor
+                                )
+                            )
+                            IconButton(
+                                onClick = {
+                                    if (inputText.isNotBlank()) {
+                                        if (isAnnouncementMode) {
+                                            vm.sendAnnouncement(chatItemId, inputText.trim())
+                                        } else {
+                                            vm.sendMessage(chatItemId, inputText.trim())
+                                        }
+                                        inputText = ""
+                                    }
+                                },
+                                enabled = inputText.isNotBlank()
+                            ) {
+                                Icon(
+                                    if (isAnnouncementMode) Icons.Default.Campaign else Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "Envoyer",
+                                    tint = when {
+                                        inputText.isBlank() -> Color.Gray
+                                        isAnnouncementMode -> announcementColor
+                                        else -> profColor
+                                    }
+                                )
+                            }
                         }
                     }
                 } else {
@@ -170,6 +235,48 @@ fun CourseScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AnnouncementCard(message: Message) {
+    val announcementColor = Color(0xFFE65100)
+    Surface(
+        color = announcementColor.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(bottom = 6.dp)
+            ) {
+                Icon(
+                    Icons.Default.Campaign,
+                    contentDescription = null,
+                    tint = announcementColor,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    "ANNONCE",
+                    color = announcementColor,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Spacer(Modifier.weight(1f))
+                Text(message.time, fontSize = 10.sp, color = Color.Gray)
+            }
+            HorizontalDivider(color = announcementColor.copy(alpha = 0.2f))
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = message.text,
+                fontSize = 15.sp,
+                color = Color(0xFF1A1A1A),
+                fontWeight = FontWeight.Medium
+            )
         }
     }
 }

@@ -44,6 +44,13 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun sendAnnouncement(chatItemId: Int, text: String) {
+        viewModelScope.launch {
+            val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+            repo.insertMessage(Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time, isAnnouncement = true))
+        }
+    }
+
     fun createCourseHub(name: String, profName: String) {
         viewModelScope.launch {
             val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
