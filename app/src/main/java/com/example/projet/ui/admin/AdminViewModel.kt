@@ -24,6 +24,10 @@ class AdminViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { repo.update(user.copy(isAdmin = !user.isAdmin)) }
     }
 
+    fun setRole(user: User, role: String) {
+        viewModelScope.launch { repo.update(user.copy(role = role)) }
+    }
+
     fun deleteUser(user: User) {
         viewModelScope.launch { repo.delete(user) }
     }

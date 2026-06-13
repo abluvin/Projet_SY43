@@ -90,14 +90,16 @@ fun AppRoot() {
     var username by remember { mutableStateOf("") }
     var userId by remember { mutableStateOf(0) }
     var isAdmin by remember { mutableStateOf(false) }
+    var userRole by remember { mutableStateOf("STUDENT") }
 
     Crossfade(targetState = appState, label = "auth_state") { state ->
         when (state) {
             AppState.LOGIN -> Connexion(
-                onLoggedIn = { name, id, admin ->
+                onLoggedIn = { name, id, admin, role ->
                     username = name
                     userId = id
                     isAdmin = admin
+                    userRole = role
                     appState = AppState.MAIN
                 },
                 onNavigateToRegister = { appState = AppState.REGISTER }
@@ -114,7 +116,7 @@ fun AppRoot() {
                 username = username,
                 onContinue = { appState = AppState.MAIN }
             )
-            AppState.MAIN -> MainApp(username = username, userId = userId, isAdmin = isAdmin)
+            AppState.MAIN -> MainApp(username = username, userId = userId, isAdmin = isAdmin, userRole = userRole)
         }
     }
 }
@@ -160,7 +162,8 @@ fun WelcomeScreen(username: String, onContinue: () -> Unit) {
 }
 
 @Composable
-fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false) {
+fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, userRole: String = "STUDENT") {
+    val isProf = userRole == "PROFESSOR"
     var showCamera by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
     var showNewChatDialog by remember { mutableStateOf(false) }

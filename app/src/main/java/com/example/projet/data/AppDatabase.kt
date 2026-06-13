@@ -20,7 +20,7 @@ import com.example.projet.data.dao.*
         Comment::class,
         Collaboration::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -70,6 +70,28 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Recreate user table: drop isProf (never persisted), add role
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS user_new (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `email` TEXT NOT NULL,
+                        `password` TEXT NOT NULL,
+                        `isAdmin` INTEGER NOT NULL DEFAULT 0,
+                        `role` TEXT NOT NULL DEFAULT 'STUDENT'
+                    )
+                """.trimIndent())
+                database.execSQL("""
+                    INSERT INTO user_new (id, name, email, password, isAdmin, role)
+                    SELECT id, name, email, password, isAdmin, 'STUDENT' FROM user
+                """.trimIndent())
+                database.execSQL("DROP TABLE user")
+                database.execSQL("ALTER TABLE user_new RENAME TO user")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -77,7 +99,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build().also { INSTANCE = it }
             }
         }

@@ -27,7 +27,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
 
     sealed class LoginState {
         object Idle : LoginState()
-        data class Success(val name: String, val id: Int, val isAdmin: Boolean) : LoginState()
+        data class Success(val name: String, val id: Int, val isAdmin: Boolean, val role: String) : LoginState()
         object InvalidEmail : LoginState()
         object InvalidCredentials : LoginState()
     }
@@ -38,7 +38,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Idle)
     val loginState: StateFlow<LoginState> = _loginState.asStateFlow()
 
-    fun register(name: String, email: String, password: String, adminCode: String = "") {
+    fun register(name: String, email: String, password: String, accessCode: String = "") {
         viewModelScope.launch {
             if (!email.matches(Regex("^[^@]+@utbm\\.fr$"))) {
                 _registerState.value = RegisterState.InvalidEmail
@@ -48,8 +48,9 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 _registerState.value = RegisterState.EmailExists
                 return@launch
             }
-            val isAdmin = adminCode == "UTBM_ADMIN"
-            val id = repo.insert(User(name = name, email = email, password = PasswordUtils.hash(password), isAdmin = isAdmin))
+            val role = if (accessCode.contains("PROF", ignoreCase = true)) "PROFESSOR" else "STUDENT"
+            val isAdmin = accessCode.contains("ADMIN", ignoreCase = true)
+            val id = repo.insert(User(name = name, email = email, password = PasswordUtils.hash(password), isAdmin = isAdmin, role = role))
             _registerState.value = RegisterState.Success(name, id.toInt())
         }
     }
@@ -64,7 +65,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
             if (user == null) {
                 _loginState.value = LoginState.InvalidCredentials
             } else {
-                _loginState.value = LoginState.Success(user.name, user.id, user.isAdmin)
+                _loginState.value = LoginState.Success(user.name, user.id, user.isAdmin, user.role)
             }
         }
     }
