@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,8 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.restaurant.AvailableRestaurants
+import com.example.projet.data.restaurant.MenuDay
 import com.example.projet.data.restaurant.RestaurantInfo
-import com.example.projet.data.restaurant.RestaurantMenu
 import com.example.projet.ui.components.UtbmLogo
 import com.example.projet.ui.theme.BadgeGlutenBg
 import com.example.projet.ui.theme.BadgeGlutenText
@@ -83,7 +82,6 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
                 .padding(innerPadding)
                 .background(Color(0xFFF8FAFC))
         ) {
-            // Sélecteur de Restaurant
             RestaurantSelector(
                 selected = selectedResto,
                 onSelected = { vm.selectRestaurant(it) }
@@ -96,7 +94,7 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
                     }
                 }
                 is MenuState.Success -> {
-                    MenuContent(state.menu, selectedResto)
+                    MenuContent(state.menuDays, selectedResto)
                 }
                 is MenuState.Error -> {
                     Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -147,9 +145,47 @@ fun RestaurantSelector(selected: RestaurantInfo, onSelected: (RestaurantInfo) ->
 }
 
 @Composable
-fun MenuContent(menu: RestaurantMenu, restaurant: RestaurantInfo) {
-    val dateStr = SimpleDateFormat("dd MMMM", Locale.FRANCE).format(Date()).uppercase()
-    val yearStr = SimpleDateFormat("yyyy", Locale.FRANCE).format(Date())
+fun MenuContent(menuDays: List<MenuDay>, restaurant: RestaurantInfo) {
+    val sdfIso = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    val sdfFr = SimpleDateFormat("dd-MM-yyyy", Locale.US)
+    val today = Date()
+    val todayIso = sdfIso.format(today)
+    val todayFr = sdfFr.format(today)
+    
+    // On cherche le menu d'aujourd'hui
+    val currentDayMenu = menuDays.find { it.date == todayIso || it.date == todayFr } 
+                        ?: menuDays.firstOrNull()
+
+    if (currentDayMenu == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Aucun menu disponible pour le moment.", textAlign = TextAlign.Center, color = Color.Gray)
+        }
+        return
+    }
+
+    // Tentative de parsing propre de la date pour le badge
+    val parsedDate: Date? = try {
+        if (currentDayMenu.date.contains("-")) {
+            val parts = currentDayMenu.date.split("-")
+            if (parts[0].length == 4) {
+                SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(currentDayMenu.date)
+            } else {
+                SimpleDateFormat("dd-MM-yyyy", Locale.US).parse(currentDayMenu.date)
+            }
+        } else {
+            null
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    val displayDate = parsedDate?.let { 
+        SimpleDateFormat("dd MMMM", Locale.FRANCE).format(it).uppercase() 
+    } ?: currentDayMenu.date
+
+    val displayYear = parsedDate?.let { 
+        SimpleDateFormat("yyyy", Locale.FRANCE).format(it) 
+    } ?: ""
 
     LazyColumn(
         modifier = Modifier
@@ -171,10 +207,9 @@ fun MenuContent(menu: RestaurantMenu, restaurant: RestaurantInfo) {
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text("Menu du jour • ${restaurant.city}", fontSize = 14.sp, color = Color.Gray)
+                    Text("Menu du ${currentDayMenu.date}", fontSize = 14.sp, color = Color.Gray)
                 }
                 Spacer(Modifier.width(8.dp))
-                // Bloc Date
                 Card(
                     colors = CardDefaults.cardColors(containerColor = UtbmBlue),
                     shape = RoundedCornerShape(12.dp)
@@ -183,39 +218,52 @@ fun MenuContent(menu: RestaurantMenu, restaurant: RestaurantInfo) {
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            dateStr,
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            yearStr,
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Black
-                        )
+                        Text(displayDate, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                        if (displayYear.isNotEmpty()) {
+                            Text(displayYear, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
             }
         }
 
-        val categories = menu.midi ?: emptyList()
-        
-        if (categories.isEmpty()) {
+        if (currentDayMenu.repas.isEmpty()) {
             item {
-                Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Pas de menu disponible pour ce restaurant aujourd'hui.", textAlign = TextAlign.Center, color = Color.Gray)
-                }
+                Text(
+                    "Détails du menu non disponibles.",
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    color = Color.Gray
+                )
             }
         } else {
-            categories.forEach { category ->
+            currentDayMenu.repas.forEach { repas ->
                 item {
-                    SectionTitle(title = category.categorie)
+                    Text(
+                        text = repas.type.uppercase(),
+                        modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 12.sp,
+                        color = UtbmBlue
+                    )
+                    HorizontalDivider(color = UtbmBlue.copy(alpha = 0.2f))
                 }
-                items(category.plats) { plat ->
-                    MenuRowItem(title = plat, price = "Tarif CROUS", badgeText = category.categorie.uppercase(), isVegan = plat.contains("Vegan", ignoreCase = true))
-                    Spacer(Modifier.height(12.dp))
+
+                repas.categories.forEach { category ->
+                    item {
+                        SectionTitle(title = category.libelle)
+                    }
+                    items(category.plats) { plat ->
+                        MenuRowItem(
+                            title = plat.libelle,
+                            price = "Tarif CROUS",
+                            badgeText = category.libelle,
+                            isVegan = plat.libelle.contains("Vegan", ignoreCase = true) || 
+                                     plat.libelle.contains("Végé", ignoreCase = true) ||
+                                     plat.libelle.contains("Falafel", ignoreCase = true)
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
                 }
             }
         }
@@ -249,7 +297,6 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Image du plat (Placeholder)
             Box(
                 modifier = Modifier
                     .size(64.dp)

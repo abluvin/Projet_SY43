@@ -9,15 +9,26 @@ data class CrousResponse<T>(
 )
 
 @Serializable
-data class MenuCategory(
-    val categorie: String,
-    val plats: List<String>
+data class MenuDay(
+    val date: String,
+    val repas: List<RepasData>
 )
 
 @Serializable
-data class RestaurantMenu(
-    val midi: List<MenuCategory>? = null,
-    val soir: List<MenuCategory>? = null
+data class RepasData(
+    val type: String,
+    val categories: List<CategoryData>
+)
+
+@Serializable
+data class CategoryData(
+    val libelle: String,
+    val plats: List<PlatData>
+)
+
+@Serializable
+data class PlatData(
+    val libelle: String
 )
 
 data class RestaurantInfo(
@@ -27,7 +38,8 @@ data class RestaurantInfo(
 )
 
 val AvailableRestaurants = listOf(
-    RestaurantInfo("2120", "Duvillard (Belfort)", "Belfort"),
-    RestaurantInfo("2122", "Portes du Jura (Montbéliard)", "Montbéliard"),
-    RestaurantInfo("2123", "Cafet' STGI (Belfort)", "Belfort")
+    RestaurantInfo("2120", "Belfort (Duvillard)", "Belfort"),
+    RestaurantInfo("2121", "Sevenans (Resto U)", "Sevenans"),
+    RestaurantInfo("2122", "Montbéliard (Portes du Jura)", "Montbéliard"),
+    RestaurantInfo("2123", "Belfort (STGI)", "Belfort")
 )
