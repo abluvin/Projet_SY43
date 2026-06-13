@@ -5,9 +5,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
@@ -19,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.Event
 import com.example.projet.data.EventType
@@ -26,8 +31,10 @@ import com.example.projet.data.SampleData
 import com.example.projet.ui.chat.ChatHeader
 import com.example.projet.ui.theme.ProjetTheme
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.UUID
 
 // Couleur associée à chaque UV
 private fun uvColor(code: String): Color = when (code) {
@@ -44,16 +51,22 @@ fun AgendaScreen(
     modifier: Modifier = Modifier,
     onCameraClick: () -> Unit = {},
     onPasteClick: () -> Unit = {},
+    isProf: Boolean = false,
+    isAdmin: Boolean = false,
     vm: AgendaViewModel = viewModel()
 ) {
     val weekStart by vm.weekStart.collectAsState()
     val selected by vm.selectedDate.collectAsState()
     val events by vm.events.collectAsState()
+    val isPrivileged = isProf || isAdmin
+    var showCreateDialog by remember { mutableStateOf(false) }
 
+    Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MaterialTheme.colorScheme.background),
+        contentPadding = PaddingValues(bottom = if (isPrivileged) 88.dp else 0.dp)
     ) {
 
         // Header section
@@ -284,6 +297,31 @@ fun AgendaScreen(
         item {
             Spacer(Modifier.height(16.dp))
         }
+    } // end LazyColumn
+
+    if (isPrivileged) {
+        FloatingActionButton(
+            onClick = { showCreateDialog = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = Color(0xFF0055A4),
+            contentColor = Color.White
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "Ajouter un événement")
+        }
+    }
+    } // end Box
+
+    if (showCreateDialog) {
+        CreateEventDialog(
+            initialDate = selected,
+            onDismiss = { showCreateDialog = false },
+            onCreate = { event ->
+                vm.addEvent(event)
+                showCreateDialog = false
+            }
+        )
     }
 }
 
@@ -299,6 +337,133 @@ private fun EmptyDay() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+private fun CreateEventDialog(
+    initialDate: LocalDate,
+    onDismiss: () -> Unit,
+    onCreate: (Event) -> Unit
+) {
+    val timeFmt = DateTimeFormatter.ofPattern("H:mm")
+    var title by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
+    var location by remember { mutableStateOf("") }
+    var instructor by remember { mutableStateOf("") }
+    var dateText by remember { mutableStateOf(initialDate.toString()) }
+    var startText by remember { mutableStateOf("08:00") }
+    var endText by remember { mutableStateOf("10:00") }
+    var selectedType by remember { mutableStateOf(EventType.COURS) }
+
+    val dateValid = runCatching { LocalDate.parse(dateText) }.isSuccess
+    val startValid = runCatching { LocalTime.parse(startText, timeFmt) }.isSuccess
+    val endValid = runCatching { LocalTime.parse(endText, timeFmt) }.isSuccess
+    val isValid = title.isNotBlank() && code.isNotBlank() && location.isNotBlank() &&
+        instructor.isNotBlank() && dateValid && startValid && endValid
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "Nouvel événement",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                OutlinedTextField(
+                    value = title, onValueChange = { title = it },
+                    label = { Text("Titre *") },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = code, onValueChange = { code = it.uppercase() },
+                    label = { Text("Code UE * (ex: SY43)") },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = location, onValueChange = { location = it },
+                    label = { Text("Salle * (ex: A101)") },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = instructor, onValueChange = { instructor = it },
+                    label = { Text("Intervenant *") },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                OutlinedTextField(
+                    value = dateText, onValueChange = { dateText = it },
+                    label = { Text("Date * (AAAA-MM-JJ)") },
+                    isError = dateText.isNotBlank() && !dateValid,
+                    modifier = Modifier.fillMaxWidth(), singleLine = true
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = startText, onValueChange = { startText = it },
+                        label = { Text("Début *") },
+                        isError = startText.isNotBlank() && !startValid,
+                        modifier = Modifier.weight(1f), singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = endText, onValueChange = { endText = it },
+                        label = { Text("Fin *") },
+                        isError = endText.isNotBlank() && !endValid,
+                        modifier = Modifier.weight(1f), singleLine = true
+                    )
+                }
+
+                Text("Type", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    EventType.values().forEach { type ->
+                        FilterChip(
+                            selected = selectedType == type,
+                            onClick = { selectedType = type },
+                            label = { Text(type.label, fontSize = 12.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = uvColor(code),
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss) { Text("Annuler") }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            onCreate(
+                                Event(
+                                    id = UUID.randomUUID().toString(),
+                                    title = title.trim(),
+                                    code = code.trim(),
+                                    location = location.trim(),
+                                    instructor = instructor.trim(),
+                                    date = LocalDate.parse(dateText),
+                                    startTime = LocalTime.parse(startText, timeFmt),
+                                    endTime = LocalTime.parse(endText, timeFmt),
+                                    type = selectedType
+                                )
+                            )
+                        },
+                        enabled = isValid,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0055A4))
+                    ) { Text("Créer") }
+                }
+            }
         }
     }
 }

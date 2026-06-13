@@ -246,6 +246,8 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
                     AgendaScreen(
                         onCameraClick = { showCamera = true },
                         onPasteClick = { showPasteDialog = true },
+                        isProf = isProf,
+                        isAdmin = isAdmin,
                         vm = agendaVM
                     )
                 }

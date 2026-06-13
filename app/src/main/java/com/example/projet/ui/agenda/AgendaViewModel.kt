@@ -63,6 +63,10 @@ class AgendaViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch { repo.insertAll(newEvents) }
     }
 
+    fun addEvent(event: Event) {
+        viewModelScope.launch { repo.insert(event) }
+    }
+
     private fun weekOf(date: LocalDate): LocalDate =
         date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 }
