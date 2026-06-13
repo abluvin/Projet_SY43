@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +40,8 @@ import com.example.projet.ui.chat.ChatScreen
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
+import com.example.projet.ui.admin.AdminScreen
+import com.example.projet.ui.admin.AdminViewModel
 import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
 import com.example.projet.ui.home.PostViewModel
@@ -52,6 +55,7 @@ object Routes {
     const val CHAT = "chat"
     const val GROUPS = "groups"
     const val MENU = "menu"
+    const val ADMIN = "admin"
     const val CREATE_POST = "create_post"
     const val CONVERSATION = "conversation/{chatItemId}"
     const val COURSE_HUB = "course_hub"
@@ -85,13 +89,15 @@ fun AppRoot() {
     var appState by remember { mutableStateOf(AppState.LOGIN) }
     var username by remember { mutableStateOf("") }
     var userId by remember { mutableStateOf(0) }
+    var isAdmin by remember { mutableStateOf(false) }
 
     Crossfade(targetState = appState, label = "auth_state") { state ->
         when (state) {
             AppState.LOGIN -> Connexion(
-                onLoggedIn = { name, id ->
+                onLoggedIn = { name, id, admin ->
                     username = name
                     userId = id
+                    isAdmin = admin
                     appState = AppState.MAIN
                 },
                 onNavigateToRegister = { appState = AppState.REGISTER }
@@ -108,7 +114,7 @@ fun AppRoot() {
                 username = username,
                 onContinue = { appState = AppState.MAIN }
             )
-            AppState.MAIN -> MainApp(username = username, userId = userId)
+            AppState.MAIN -> MainApp(username = username, userId = userId, isAdmin = isAdmin)
         }
     }
 }
@@ -154,7 +160,7 @@ fun WelcomeScreen(username: String, onContinue: () -> Unit) {
 }
 
 @Composable
-fun MainApp(username: String = "", userId: Int = 0) {
+fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false) {
     var showCamera by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
     var showNewChatDialog by remember { mutableStateOf(false) }
@@ -164,20 +170,25 @@ fun MainApp(username: String = "", userId: Int = 0) {
     val agendaVM: AgendaViewModel = viewModel()
     val collaborationVM: CollaborationViewModel = viewModel()
     val postVM: PostViewModel = viewModel()
+    val adminVM: AdminViewModel = viewModel()
     val collaborationUserId = "user_${username.lowercase().replace(" ", "_")}"
 
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    val bottomNavRoutes = setOf(Routes.HOME, Routes.AGENDA, Routes.CHAT, Routes.GROUPS, Routes.MENU)
-    val navItems = listOf(
-        BottomNavItem(Routes.HOME, "Accueil", Icons.Filled.Home),
-        BottomNavItem(Routes.AGENDA, "Agenda", Icons.Filled.CalendarMonth),
-        BottomNavItem(Routes.CHAT, "Chat", Icons.Filled.Forum),
-        BottomNavItem(Routes.GROUPS, "Collab", Icons.Filled.Groups),
-        BottomNavItem(Routes.MENU, "Restaurant", Icons.Filled.Restaurant)
-    )
+    val bottomNavRoutes = buildSet {
+        addAll(setOf(Routes.HOME, Routes.AGENDA, Routes.CHAT, Routes.GROUPS, Routes.MENU))
+        if (isAdmin) add(Routes.ADMIN)
+    }
+    val navItems = buildList {
+        add(BottomNavItem(Routes.HOME, "Accueil", Icons.Filled.Home))
+        add(BottomNavItem(Routes.AGENDA, "Agenda", Icons.Filled.CalendarMonth))
+        add(BottomNavItem(Routes.CHAT, "Chat", Icons.Filled.Forum))
+        add(BottomNavItem(Routes.GROUPS, "Collab", Icons.Filled.Groups))
+        add(BottomNavItem(Routes.MENU, "Restaurant", Icons.Filled.Restaurant))
+        if (isAdmin) add(BottomNavItem(Routes.ADMIN, "Admin", Icons.Filled.AdminPanelSettings))
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -220,6 +231,7 @@ fun MainApp(username: String = "", userId: Int = 0) {
                     HomeScreen(
                         username = username,
                         currentUserId = userId,
+                        isAdmin = isAdmin,
                         postVm = postVM,
                         onCreatePostClick = { navController.navigate(Routes.CREATE_POST) }
                     )
@@ -249,6 +261,9 @@ fun MainApp(username: String = "", userId: Int = 0) {
                 }
                 composable(Routes.MENU) {
                     MenuScreen()
+                }
+                composable(Routes.ADMIN) {
+                    AdminScreen(currentUserId = userId, vm = adminVM)
                 }
                 composable(Routes.CREATE_POST) {
                     CreatePostScreen(

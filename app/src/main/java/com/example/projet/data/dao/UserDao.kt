@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface UserDao {
 
+    @Query("SELECT * FROM user ORDER BY name ASC")
+    fun getAll(): Flow<List<User>>
+
     @Query("SELECT * FROM user WHERE id = :id")
     suspend fun getById(id: Int): User?
 

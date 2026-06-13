@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -56,6 +57,7 @@ fun Register(
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var adminCode by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf("") }
 
     val emailError = email.isNotBlank() && !email.matches(Regex("^[^@]+@utbm\\.fr$"))
@@ -133,6 +135,16 @@ fun Register(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 )
+
+                OutlinedTextField(
+                    value = adminCode,
+                    onValueChange = { adminCode = it },
+                    label = { Text("Code administrateur (optionnel)") },
+                    leadingIcon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = utbmBlue) },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
             }
         }
 
@@ -144,7 +156,7 @@ fun Register(
         }
 
         Button(
-            onClick = { vm.register(username, email, password) },
+            onClick = { vm.register(username, email, password, adminCode) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),

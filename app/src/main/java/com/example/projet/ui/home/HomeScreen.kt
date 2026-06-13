@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
@@ -67,6 +68,7 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     username: String = "",
     currentUserId: Int = 0,
+    isAdmin: Boolean = false,
     postVm: PostViewModel = viewModel(),
     onCreatePostClick: () -> Unit = {}
 ) {
@@ -144,6 +146,7 @@ fun HomeScreen(
                         post = post,
                         vm = postVm,
                         currentUserId = currentUserId,
+                        isAdmin = isAdmin,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -158,6 +161,7 @@ fun PostBloc(
     post: Post,
     vm: PostViewModel,
     currentUserId: Int,
+    isAdmin: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -235,6 +239,11 @@ fun PostBloc(
                         }
                         IconButton(onClick = {}) {
                             Icon(Icons.Filled.Share, contentDescription = "Partager", tint = Color.White)
+                        }
+                        if (isAdmin || post.idUser == currentUserId) {
+                            IconButton(onClick = { vm.deletePost(post) }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Supprimer", tint = Color(0xFFFF6B6B))
+                            }
                         }
                     }
 

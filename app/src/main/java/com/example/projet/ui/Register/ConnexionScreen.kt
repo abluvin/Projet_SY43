@@ -53,7 +53,7 @@ import com.example.projet.R
 @Composable
 fun Connexion(
     vm: UserViewModel = viewModel(),
-    onLoggedIn: (String, Int) -> Unit = { _, _ -> },
+    onLoggedIn: (String, Int, Boolean) -> Unit = { _, _, _ -> },
     onNavigateToRegister: () -> Unit = {}
 ) {
     val utbmBlue = Color(0xFF0055A4)
@@ -68,7 +68,7 @@ fun Connexion(
     val state by vm.loginState.collectAsState()
     LaunchedEffect(state) {
         when (val s = state) {
-            is UserViewModel.LoginState.Success -> onLoggedIn(s.name, s.id)
+            is UserViewModel.LoginState.Success -> onLoggedIn(s.name, s.id, s.isAdmin)
             is UserViewModel.LoginState.InvalidEmail -> errorMessage = "L'email doit être au format prénom.nom@utbm.fr"
             is UserViewModel.LoginState.InvalidCredentials -> errorMessage = "Email ou mot de passe incorrect."
             else -> {}

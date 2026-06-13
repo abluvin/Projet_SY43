@@ -42,4 +42,8 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
             ))
         }
     }
+
+    fun deletePost(post: Post) {
+        viewModelScope.launch { repo.delete(post) }
+    }
 }
