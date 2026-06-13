@@ -53,7 +53,7 @@ import com.example.projet.ui.components.UtbmLogo
 fun Register(
     modifier: Modifier = Modifier,
     vm: UserViewModel = viewModel(),
-    onRegistered: (String, Int) -> Unit = { _, _ -> },
+    onRegistered: (String, Int, Boolean, String) -> Unit = { _, _, _, _ -> },
     onNavigateToLogin: () -> Unit = {}
 ) {
     val utbmBlue = Color(0xFF0055A4)
@@ -70,7 +70,7 @@ fun Register(
     val state by vm.registerState.collectAsState()
     LaunchedEffect(state) {
         when (val s = state) {
-            is UserViewModel.RegisterState.Success -> onRegistered(s.name, s.id)
+            is UserViewModel.RegisterState.Success -> onRegistered(s.name, s.id, s.isAdmin, s.role)
             is UserViewModel.RegisterState.EmailExists -> errorMessage = "Cet email est déjà utilisé."
             is UserViewModel.RegisterState.InvalidEmail -> errorMessage = "L'email doit être au format prénom.nom@utbm.fr"
             else -> {}

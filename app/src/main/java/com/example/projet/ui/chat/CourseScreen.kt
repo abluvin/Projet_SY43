@@ -4,11 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,24 +17,27 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.projet.data.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.projet.data.Message
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseScreen(
-    courseName: String,
-    onBack: () -> Unit
+    chatItemId: Int,
+    isProf: Boolean = false,
+    onBack: () -> Unit,
+    vm: ChatViewModel = viewModel()
 ) {
     val utbmBlue = Color(0xFF0055A4)
-    
-    val materials = remember {
-        listOf(
-            CourseMaterial(title = "Support de Cours - Chapitre 1", description = "Introduction aux systèmes mobiles", date = "10 Oct"),
-            CourseMaterial(title = "TD 1 - Layouts", description = "Exercices sur Jetpack Compose", date = "12 Oct"),
-            CourseMaterial(title = "Support de Cours - Chapitre 2", description = "Gestion de l'état et Navigation", date = "17 Oct"),
-            CourseMaterial(title = "TP 1 - CameraX", description = "Sujet du premier TP noté", date = "Hier"),
-            CourseMaterial(title = "Annales 2023", description = "Examen final de l'année dernière", date = "Aujourd'hui")
-        )
+    val profColor = Color(0xFF34A853)
+
+    val chatItem by vm.getChatItem(chatItemId).collectAsState(initial = null)
+    val messages by vm.getMessages(chatItemId).collectAsState(initial = emptyList())
+    var inputText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 
     Scaffold(
@@ -42,18 +45,21 @@ fun CourseScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(courseName, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text("Professeur : Uniquement lecture", fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            chatItem?.name ?: "Hub de cours",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isProf) "Vous êtes professeur de ce hub" else "Lecture seule",
+                            fontSize = 12.sp,
+                            color = if (isProf) profColor else Color.Gray
+                        )
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* Info */ }) {
-                        Icon(Icons.Default.Info, contentDescription = "Informations", tint = utbmBlue)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -67,6 +73,7 @@ fun CourseScreen(
                 .background(Color(0xFFF7F7F7))
         ) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
@@ -75,16 +82,13 @@ fun CourseScreen(
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Surface(
                             color = Color(0xFFE0E0E0),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
-                                "Seul le professeur peut envoyer des documents",
+                                "Seul le professeur peut envoyer des messages",
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                 fontSize = 12.sp,
                                 color = Color.DarkGray
@@ -92,31 +96,78 @@ fun CourseScreen(
                         }
                     }
                 }
-                
-                items(materials) { material ->
-                    MaterialCard(material)
+
+                if (messages.isEmpty()) {
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().padding(top = 32.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                "Aucune annonce pour l'instant.",
+                                color = Color.Gray,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                } else {
+                    items(messages) { message ->
+                        HubMessageCard(message = message)
+                    }
                 }
             }
-            
-            // Bottom Bar indicating read-only
+
+            // Bottom bar
             Surface(
                 tonalElevation = 4.dp,
                 modifier = Modifier.fillMaxWidth(),
                 color = Color.White
             ) {
-                Box(
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .navigationBarsPadding()
-                        .imePadding()
-                        .fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "Mode lecture seule activé pour ce canal",
-                        color = Color.Gray,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                if (isProf) {
+                    Row(
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .navigationBarsPadding()
+                            .imePadding()
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = inputText,
+                            onValueChange = { inputText = it },
+                            placeholder = { Text("Envoyer une annonce...") },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(24.dp),
+                            maxLines = 3
+                        )
+                        IconButton(
+                            onClick = {
+                                if (inputText.isNotBlank()) {
+                                    vm.sendMessage(chatItemId, inputText.trim())
+                                    inputText = ""
+                                }
+                            },
+                            enabled = inputText.isNotBlank()
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Envoyer",
+                                tint = if (inputText.isNotBlank()) profColor else Color.Gray
+                            )
+                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .navigationBarsPadding()
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Mode lecture seule activé pour ce canal",
+                            color = Color.Gray,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
         }
@@ -124,9 +175,7 @@ fun CourseScreen(
 }
 
 @Composable
-fun MaterialCard(material: CourseMaterial) {
-    val utbmBlue = Color(0xFF0055A4)
-    
+fun HubMessageCard(message: Message) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Start
@@ -137,35 +186,14 @@ fun MaterialCard(material: CourseMaterial) {
             shadowElevation = 1.dp,
             modifier = Modifier.widthIn(max = 300.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Description,
-                    contentDescription = null,
-                    tint = utbmBlue,
-                    modifier = Modifier.size(40.dp)
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(text = message.text, fontSize = 15.sp)
+                Text(
+                    text = message.time,
+                    fontSize = 10.sp,
+                    color = Color.LightGray,
+                    modifier = Modifier.align(Alignment.End)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = material.title,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                    Text(
-                        text = material.description,
-                        fontSize = 13.sp,
-                        color = Color.Gray
-                    )
-                    Text(
-                        text = material.date,
-                        fontSize = 10.sp,
-                        color = Color.LightGray,
-                        modifier = Modifier.align(Alignment.End)
-                    )
-                }
             }
         }
     }

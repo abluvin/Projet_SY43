@@ -1,6 +1,7 @@
 package com.example.projet.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,12 +21,15 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,6 +80,11 @@ fun HomeScreen(
     val addIconColor = Color(0xFF5992E4)
 
     val posts by postVm.posts.collectAsState()
+    var selectedUe by remember { mutableStateOf<String?>(null) }
+    val ues = remember(posts) { posts.mapNotNull { it.ue }.distinct().sorted() }
+    val filteredPosts = remember(posts, selectedUe) {
+        if (selectedUe == null) posts else posts.filter { it.ue == selectedUe }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -131,17 +140,56 @@ fun HomeScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            if (posts.isEmpty()) {
+            // UE filter chips
+            if (ues.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedUe == null,
+                        onClick = { selectedUe = null },
+                        label = { Text("Tout") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF0055A4),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                    ues.forEach { ue ->
+                        FilterChip(
+                            selected = selectedUe == ue,
+                            onClick = { selectedUe = if (selectedUe == ue) null else ue },
+                            label = { Text(ue) },
+                            leadingIcon = {
+                                Icon(Icons.Filled.School, contentDescription = null, modifier = Modifier.size(14.dp))
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF34A853),
+                                selectedLabelColor = Color.White,
+                                selectedLeadingIconColor = Color.White
+                            )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            if (filteredPosts.isEmpty()) {
                 Text(
-                    text = "Aucun post pour l'instant.\nSoyez le premier à publier !",
+                    text = if (selectedUe != null) "Aucun post pour l'UE $selectedUe."
+                           else "Aucun post pour l'instant.\nSoyez le premier à publier !",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                posts.forEach { post ->
+                filteredPosts.forEach { post ->
                     PostBloc(
                         post = post,
                         vm = postVm,
@@ -188,6 +236,23 @@ fun PostBloc(
         color = Color.Transparent
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
+            // UE badge
+            if (post.ue != null) {
+                Surface(
+                    color = Color(0xFF34A853).copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Filled.School, contentDescription = null, tint = Color(0xFF34A853), modifier = Modifier.size(12.dp))
+                        Text(post.ue!!, color = Color(0xFF34A853), style = MaterialTheme.typography.labelSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    }
+                }
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,

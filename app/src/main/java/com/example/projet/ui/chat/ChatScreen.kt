@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.*
 import com.example.projet.ui.components.UtbmLogo
@@ -30,12 +33,16 @@ fun ChatScreen(
     onConversationClick: (ChatItem) -> Unit,
     onCourseHubClick: () -> Unit,
     onNewChatClick: () -> Unit,
+    isProf: Boolean = false,
+    profName: String = "",
     modifier: Modifier = Modifier,
     vm: ChatViewModel = viewModel()
 ) {
     val utbmBlue = Color(0xFF0055A4)
+    val profColor = Color(0xFF34A853)
 
     val allChatItems by vm.conversations.collectAsState()
+    var showCreateHubDialog by remember { mutableStateOf(false) }
 
     val filters = listOf("Tout", "Non lus", "Groupes", "Cours")
     var selectedFilter by remember { mutableStateOf("Tout") }
@@ -52,13 +59,27 @@ fun ChatScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNewChatClick,
-                containerColor = utbmBlue,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp)
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.Edit, contentDescription = "Nouveau Message")
+                if (isProf) {
+                    SmallFloatingActionButton(
+                        onClick = { showCreateHubDialog = true },
+                        containerColor = profColor,
+                        contentColor = Color.White
+                    ) {
+                        Icon(Icons.Default.School, contentDescription = "Créer un hub")
+                    }
+                }
+                FloatingActionButton(
+                    onClick = onNewChatClick,
+                    containerColor = utbmBlue,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Nouveau Message")
+                }
             }
         }
     ) { padding ->
@@ -112,6 +133,45 @@ fun ChatScreen(
             }
         }
     }
+
+    if (showCreateHubDialog) {
+        CreateHubDialog(
+            onDismiss = { showCreateHubDialog = false },
+            onCreate = { hubName ->
+                vm.createCourseHub(hubName, profName)
+                showCreateHubDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun CreateHubDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+    var hubName by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.School, contentDescription = null, tint = Color(0xFF34A853)) },
+        title = { Text("Créer un hub de cours") },
+        text = {
+            OutlinedTextField(
+                value = hubName,
+                onValueChange = { hubName = it.uppercase() },
+                label = { Text("Code ou nom de l'UE") },
+                placeholder = { Text("ex: SY43, MT22...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (hubName.isNotBlank()) onCreate(hubName) },
+                enabled = hubName.isNotBlank()
+            ) { Text("Créer", color = Color(0xFF34A853)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annuler") }
+        }
+    )
 }
 
 @Composable

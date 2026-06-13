@@ -20,7 +20,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
 
     sealed class RegisterState {
         object Idle : RegisterState()
-        data class Success(val name: String, val id: Int) : RegisterState()
+        data class Success(val name: String, val id: Int, val isAdmin: Boolean, val role: String) : RegisterState()
         object EmailExists : RegisterState()
         object InvalidEmail : RegisterState()
     }
@@ -51,7 +51,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
             val role = if (accessCode.contains("PROF", ignoreCase = true)) "PROFESSOR" else "STUDENT"
             val isAdmin = accessCode.contains("ADMIN", ignoreCase = true)
             val id = repo.insert(User(name = name, email = email, password = PasswordUtils.hash(password), isAdmin = isAdmin, role = role))
-            _registerState.value = RegisterState.Success(name, id.toInt())
+            _registerState.value = RegisterState.Success(name, id.toInt(), isAdmin, role)
         }
     }
 

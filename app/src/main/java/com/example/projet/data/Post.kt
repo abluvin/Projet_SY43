@@ -21,5 +21,6 @@ data class Post(
     var text: String = "",
     var idUser: Int,
     var imageUrl: String? = null,
-    var timestamp: Long = System.currentTimeMillis()
+    var timestamp: Long = System.currentTimeMillis(),
+    var ue: String? = null
 )

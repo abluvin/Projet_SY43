@@ -20,7 +20,7 @@ import com.example.projet.data.dao.*
         Comment::class,
         Collaboration::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -92,6 +92,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE post ADD COLUMN ue TEXT")
+            }
+        }
+
+        private val SEED_CALLBACK = object : RoomDatabase.Callback() {
+            override fun onCreate(db: SupportSQLiteDatabase) {
+                super.onCreate(db)
+                val profPassword = PasswordUtils.hash("prof123")
+                val adminPassword = PasswordUtils.hash("admin123")
+                db.execSQL(
+                    "INSERT INTO user (name, email, password, isAdmin, role) VALUES " +
+                    "('Professeur Demo', 'prof.demo@utbm.fr', '$profPassword', 0, 'PROFESSOR')," +
+                    "('Admin Demo', 'admin.demo@utbm.fr', '$adminPassword', 1, 'STUDENT')"
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -99,7 +118,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addCallback(SEED_CALLBACK)
                     .build().also { INSTANCE = it }
             }
         }

@@ -24,9 +24,9 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
     val posts: StateFlow<List<Post>> = repo.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun createPost(text: String, imageUrl: String?, userId: Int = 1) {
+    fun createPost(text: String, imageUrl: String?, userId: Int = 1, ue: String? = null) {
         viewModelScope.launch {
-            repo.insert(Post(text = text, idUser = userId, imageUrl = imageUrl))
+            repo.insert(Post(text = text, idUser = userId, imageUrl = imageUrl, ue = ue))
         }
     }
 

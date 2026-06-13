@@ -58,7 +58,8 @@ object Routes {
     const val ADMIN = "admin"
     const val CREATE_POST = "create_post"
     const val CONVERSATION = "conversation/{chatItemId}"
-    const val COURSE_HUB = "course_hub"
+    const val COURSE_HUB = "course_hub/{chatItemId}"
+    fun courseHub(id: Int) = "course_hub/$id"
     fun conversation(id: Int) = "conversation/$id"
 }
 
@@ -105,9 +106,11 @@ fun AppRoot() {
                 onNavigateToRegister = { appState = AppState.REGISTER }
             )
             AppState.REGISTER -> Register(
-                onRegistered = { name, id ->
+                onRegistered = { name, id, admin, role ->
                     username = name
                     userId = id
+                    isAdmin = admin
+                    userRole = role
                     appState = AppState.WELCOME
                 },
                 onNavigateToLogin = { appState = AppState.LOGIN }
@@ -249,10 +252,16 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
                 composable(Routes.CHAT) {
                     ChatScreen(
                         onConversationClick = { chatItem ->
-                            navController.navigate(Routes.conversation(chatItem.id))
+                            if (chatItem.isCourse) {
+                                navController.navigate(Routes.courseHub(chatItem.id))
+                            } else {
+                                navController.navigate(Routes.conversation(chatItem.id))
+                            }
                         },
-                        onCourseHubClick = { navController.navigate(Routes.COURSE_HUB) },
-                        onNewChatClick = { showNewChatDialog = true }
+                        onCourseHubClick = { navController.navigate(Routes.courseHub(6)) },
+                        onNewChatClick = { showNewChatDialog = true },
+                        isProf = isProf,
+                        profName = username
                     )
                 }
                 composable(Routes.GROUPS) {
@@ -270,8 +279,9 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
                 }
                 composable(Routes.CREATE_POST) {
                     CreatePostScreen(
-                        onPostCreated = { text, uri ->
-                            postVM.createPost(text, uri?.toString(), userId)
+                        isProf = isProf,
+                        onPostCreated = { text, uri, ue ->
+                            postVM.createPost(text, uri?.toString(), userId, ue)
                             navController.popBackStack()
                         },
                         onBack = { navController.popBackStack() }
@@ -287,9 +297,14 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
                         onBack = { navController.popBackStack() }
                     )
                 }
-                composable(Routes.COURSE_HUB) {
+                composable(
+                    route = Routes.COURSE_HUB,
+                    arguments = listOf(navArgument("chatItemId") { type = NavType.IntType })
+                ) { backStackEntry ->
+                    val chatItemId = backStackEntry.arguments?.getInt("chatItemId") ?: return@composable
                     CourseScreen(
-                        courseName = "SY43 - Plateformes Mobiles",
+                        chatItemId = chatItemId,
+                        isProf = isProf,
                         onBack = { navController.popBackStack() }
                     )
                 }

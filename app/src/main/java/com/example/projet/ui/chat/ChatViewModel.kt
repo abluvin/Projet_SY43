@@ -44,6 +44,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun createCourseHub(name: String, profName: String) {
+        viewModelScope.launch {
+            val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+            repo.insertConversation(
+                ChatItem(
+                    id = 0,
+                    name = name,
+                    lastMessage = "Hub créé par $profName",
+                    time = time,
+                    isCourse = true
+                )
+            )
+        }
+    }
+
     private suspend fun seedConversations() {
         val items = listOf(
             ChatItem(1, "Lucas Bernard", "Tu as fini le rapport de TP pour demain ?", "14:20", unreadCount = 2, hasOnlineStatus = true),
