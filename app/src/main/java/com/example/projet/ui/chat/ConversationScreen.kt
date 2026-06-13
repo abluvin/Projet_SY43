@@ -23,11 +23,13 @@ import com.example.projet.data.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConversationScreen(
-    chatItem: ChatItem,
+    chatItemId: Int,
     onBack: () -> Unit,
     vm: ChatViewModel = viewModel()
 ) {
-    val messages by vm.getMessages(chatItem.id).collectAsState(initial = emptyList())
+    val chatItem by vm.getChatItem(chatItemId).collectAsState(initial = null)
+    val item = chatItem ?: return
+    val messages by vm.getMessages(chatItemId).collectAsState(initial = emptyList())
     val listState = rememberLazyListState()
     var newMessageText by remember { mutableStateOf("") }
 
@@ -42,8 +44,8 @@ fun ConversationScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(chatItem.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        if (chatItem.hasOnlineStatus) {
+                        Text(item.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        if (item.hasOnlineStatus) {
                             Text("En ligne", fontSize = 12.sp, color = Color(0xFF34A853))
                         }
                     }
@@ -108,7 +110,7 @@ fun ConversationScreen(
                     IconButton(
                         onClick = {
                             if (newMessageText.isNotBlank()) {
-                                vm.sendMessage(chatItem.id, newMessageText)
+                                vm.sendMessage(chatItemId, newMessageText)
                                 newMessageText = ""
                             }
                         },

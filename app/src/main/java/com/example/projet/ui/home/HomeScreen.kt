@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.projet.ui.components.UtbmLogo
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -33,7 +33,13 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,57 +53,49 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.R
+import com.example.projet.data.Post
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
     username: String = "",
+    currentUserId: Int = 0,
+    postVm: PostViewModel = viewModel(),
     onCreatePostClick: () -> Unit = {}
 ) {
     val utbmDarkColor = Color(0xFF001B3C)
     val addIconColor = Color(0xFF5992E4)
+
+    val posts by postVm.posts.collectAsState()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Icon(
-                        painter = painterResource(id = R.drawable.myutbmlogo),
-                        contentDescription = "UTBM Logo",
-                        tint = Color.Unspecified,
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                    )
+                    UtbmLogo(iconSize = 32.dp)
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /* Action Settings */ }) {
-                        Icon(
-                            imageVector = Icons.Filled.Settings,
-                            contentDescription = "Settings",
-                            tint = utbmDarkColor
-                        )
+                    IconButton(onClick = {}) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = utbmDarkColor)
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Action Recherche */ }) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Search",
-                            tint = utbmDarkColor
-                        )
+                    IconButton(onClick = {}) {
+                        Icon(Icons.Filled.Search, contentDescription = "Search", tint = utbmDarkColor)
                     }
                 }
             )
         },
         floatingActionButton = {
-            IconButton(
-                onClick = onCreatePostClick,
-                modifier = Modifier.size(64.dp)
-            ) {
+            IconButton(onClick = onCreatePostClick, modifier = Modifier.size(64.dp)) {
                 Icon(
                     imageVector = Icons.Filled.AddCircle,
                     contentDescription = "Ajouter un post",
@@ -133,30 +131,46 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            PostBloc(
-                name = "Aujourd'hui",
-                description = "Actualités du jour",
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Consultez votre agenda pour voir vos cours et importer votre planning",
-                style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (posts.isEmpty()) {
+                Text(
+                    text = "Aucun post pour l'instant.\nSoyez le premier à publier !",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                posts.forEach { post ->
+                    PostBloc(
+                        post = post,
+                        vm = postVm,
+                        currentUserId = currentUserId,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
         }
     }
 }
 
 @Composable
-fun PostBloc(name: String, description: String, modifier: Modifier = Modifier) {
+fun PostBloc(
+    post: Post,
+    vm: PostViewModel,
+    currentUserId: Int,
+    modifier: Modifier = Modifier
+) {
     var expanded by remember { mutableStateOf(false) }
     var showComments by remember { mutableStateOf(false) }
-    var comments by remember { mutableStateOf(listOf("Super poste !", "Merci pour l'info")) }
     var newCommentText by remember { mutableStateOf("") }
+
+    val commentsFlow = remember(post.id) { vm.getComments(post.id) }
+    val comments by commentsFlow.collectAsState(initial = emptyList())
+
+    val dateStr = remember(post.timestamp) {
+        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.FRENCH).format(Date(post.timestamp))
+    }
+    val authorLabel = if (post.idUser == currentUserId) "Vous" else "Étudiant"
 
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF003061), Color(0xFF004689))
@@ -175,81 +189,106 @@ fun PostBloc(name: String, description: String, modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = name,
+                        text = authorLabel,
                         color = Color.White,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = description,
-                        color = Color.White.copy(alpha = 0.8f)
+                        text = dateStr,
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = post.text,
+                        color = Color.White.copy(alpha = 0.9f)
                     )
                 }
                 ElevatedButton(
-                    onClick = { 
-                        expanded = !expanded 
+                    onClick = {
+                        expanded = !expanded
                         if (!expanded) showComments = false
                     }
                 ) {
                     Text(if (expanded) "Réduire" else "Réagir")
                 }
             }
-            if (expanded) {
-                Row(
-                    modifier = Modifier.padding(top = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    IconButton(onClick = { /* Action Like */ }) {
-                        Icon(Icons.Filled.Favorite, contentDescription = "Like", tint = Color.White)
-                    }
-                    IconButton(onClick = { showComments = !showComments }) {
-                        Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Comment", tint = Color.White)
-                    }
-                    IconButton(onClick = { /* Action Share */ }) {
-                        Icon(Icons.Filled.Share, contentDescription = "Share", tint = Color.White)
-                    }
-                }
 
-                if (showComments) {
-                    Column(modifier = Modifier.padding(top = 16.dp)) {
-                        comments.forEach { comment ->
-                            Text(
-                                text = "• $comment",
-                                color = Color.White,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.padding(top = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Filled.Favorite, contentDescription = "Like", tint = Color.White)
                         }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(
-                                value = newCommentText,
-                                onValueChange = { newCommentText = it },
-                                modifier = Modifier.weight(1f),
-                                placeholder = { Text("Ajouter un commentaire...", color = Color.White.copy(alpha = 0.6f)) },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = Color.White,
-                                    unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
-                                    cursorColor = Color.White,
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White
-                                ),
-                                textStyle = MaterialTheme.typography.bodySmall
-                            )
-                            IconButton(onClick = {
-                                if (newCommentText.isNotBlank()) {
-                                    comments = comments + newCommentText
-                                    newCommentText = ""
+                        IconButton(onClick = { showComments = !showComments }) {
+                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Commentaires", tint = Color.White)
+                        }
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Filled.Share, contentDescription = "Partager", tint = Color.White)
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = showComments,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Column(modifier = Modifier.padding(top = 16.dp)) {
+                            if (comments.isEmpty()) {
+                                Text(
+                                    text = "Aucun commentaire. Soyez le premier !",
+                                    color = Color.White.copy(alpha = 0.6f),
+                                    fontSize = 13.sp,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            } else {
+                                comments.forEach { comment ->
+                                    Text(
+                                        text = "• ${comment.content}",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 4.dp)
+                                    )
                                 }
-                            }) {
-                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Envoyer", tint = Color.White)
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OutlinedTextField(
+                                    value = newCommentText,
+                                    onValueChange = { newCommentText = it },
+                                    modifier = Modifier.weight(1f),
+                                    placeholder = {
+                                        Text("Ajouter un commentaire...", color = Color.White.copy(alpha = 0.6f))
+                                    },
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Color.White,
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.5f),
+                                        cursorColor = Color.White,
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White
+                                    ),
+                                    textStyle = MaterialTheme.typography.bodySmall
+                                )
+                                IconButton(onClick = {
+                                    if (newCommentText.isNotBlank()) {
+                                        vm.addComment(post.id, currentUserId, newCommentText)
+                                        newCommentText = ""
+                                    }
+                                }) {
+                                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Envoyer", tint = Color.White)
+                                }
                             }
                         }
                     }

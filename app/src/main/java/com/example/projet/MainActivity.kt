@@ -24,17 +24,18 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.ChatItem
 import com.example.projet.data.ScheduleParser
+import com.example.projet.ui.Register.Connexion
 import com.example.projet.ui.Register.Register
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
-
 import com.example.projet.ui.chat.ChatScreen
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
 import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
+import com.example.projet.ui.restaurant.MenuScreen
 import com.example.projet.ui.theme.ProjetTheme
 
 enum class Screen {
@@ -56,14 +57,12 @@ class MainActivity : ComponentActivity() {
         setContent {
             ProjetTheme {
                 AppRoot()
-
-
             }
         }
     }
 }
 
-private enum class AppState { REGISTER, WELCOME, MAIN }
+private enum class AppState { REGISTER, LOGIN, WELCOME, MAIN }
 
 @Composable
 fun AppRoot() {
@@ -71,10 +70,20 @@ fun AppRoot() {
     var username by remember { mutableStateOf("") }
 
     when (appState) {
-        AppState.REGISTER -> Register(onRegistered = { name ->
-            username = name
-            appState = AppState.WELCOME
-        })
+        AppState.REGISTER -> Register(
+            onRegistered = { name ->
+                username = name
+                appState = AppState.WELCOME
+            },
+            onGoToLogin = { appState = AppState.LOGIN }
+        )
+        AppState.LOGIN -> Connexion(
+            onLoggedIn = { name ->
+                username = name
+                appState = AppState.MAIN
+            },
+            onGoToRegister = { appState = AppState.REGISTER }
+        )
         AppState.WELCOME -> WelcomeScreen(
             username = username,
             onContinue = { appState = AppState.MAIN }
@@ -212,10 +221,7 @@ fun MainApp(username: String = "") {
                     "Groupes",
                     Modifier.padding(innerPadding)
                 )
-                Screen.MENU -> PlaceholderScreen(
-                    "Restaurant",
-                    Modifier.padding(innerPadding)
-                )
+                Screen.MENU -> MenuScreen()
                 Screen.CREATE_POST -> CreatePostScreen(
                     onPostCreated = { text, uri ->
                         currentScreen = previousScreen
@@ -227,8 +233,8 @@ fun MainApp(username: String = "") {
                 Screen.CONVERSATION -> {
                     selectedChatItem?.let { item ->
                         ConversationScreen(
-                            chatItem = item,
-                            onBack = { currentScreen = Screen.CHAT }
+                            chatItemId = item.id,
+                            onBack = { currentScreen = Screen.CHAT },
                         )
                     }
                 }

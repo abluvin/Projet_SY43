@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.projet.data.dao.*
 
 @Database(
@@ -15,9 +17,10 @@ import com.example.projet.data.dao.*
         CourseMaterial::class,
         User::class,
         Post::class,
-        Comment::class
+        Comment::class,
+        Collaboration::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -30,10 +33,36 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun postDao(): PostDao
     abstract fun commentDao(): CommentDao
     abstract fun courseMaterialDao(): CourseMaterialDao
+    abstract fun collaborationDao(): CollaborationDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `collaborations` (
+                        `id` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `ue` TEXT NOT NULL,
+                        `description` TEXT NOT NULL,
+                        `campus` TEXT NOT NULL,
+                        `room` TEXT NOT NULL,
+                        `creatorId` TEXT NOT NULL,
+                        `creatorName` TEXT NOT NULL,
+                        `participantIds` TEXT NOT NULL,
+                        `participantNames` TEXT NOT NULL,
+                        `status` TEXT NOT NULL,
+                        `date` TEXT NOT NULL,
+                        `startTime` TEXT NOT NULL,
+                        `endTime` TEXT NOT NULL,
+                        `maxParticipants` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )"""
+                )
+            }
+        }
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -41,7 +70,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "app_database"
-                ).build().also { INSTANCE = it }
+                )
+                    .addMigrations(MIGRATION_1_2)
+                    .build().also { INSTANCE = it }
             }
         }
     }

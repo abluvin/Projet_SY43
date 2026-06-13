@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.*
+import com.example.projet.ui.components.UtbmLogo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,7 +102,12 @@ fun ChatScreen(
 
                 // Chat List
                 items(filteredItems) { item ->
-                    ChatListItem(item, onClick = { onConversationClick(item) })
+                    val lastMsg by vm.getLastMessage(item.id).collectAsState(initial = item.lastMessage)
+                    ChatListItem(
+                        item = item,
+                        lastMessage = lastMsg ?: item.lastMessage,
+                        onClick = { onConversationClick(item) }
+                    )
                 }
             }
         }
@@ -114,28 +120,11 @@ fun ChatHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFE0E0E0)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = Color.Gray)
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "UTBM",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = utbmBlue
-            )
-        }
+        UtbmLogo(iconSize = 36.dp)
         Icon(
             imageVector = Icons.Default.Notifications,
             contentDescription = "Notifications",
@@ -267,7 +256,7 @@ fun CourseHubCard(onClick: () -> Unit) {
 }
 
 @Composable
-fun ChatListItem(item: ChatItem, onClick: () -> Unit) {
+fun ChatListItem(item: ChatItem, lastMessage: String, onClick: () -> Unit) {
     val utbmBlue = Color(0xFF0055A4)
     Surface(
         onClick = onClick,
@@ -347,7 +336,7 @@ fun ChatListItem(item: ChatItem, onClick: () -> Unit) {
                         Text("A envoyé une photo", color = Color.Gray, fontSize = 14.sp)
                     } else {
                         Text(
-                            text = item.lastMessage,
+                            text = lastMessage,
                             color = if (item.unreadCount > 0) Color.Black else Color.Gray,
                             fontSize = 14.sp,
                             maxLines = 1,

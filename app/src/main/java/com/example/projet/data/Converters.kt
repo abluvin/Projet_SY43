@@ -29,4 +29,18 @@ class Converters {
 
     @TypeConverter
     fun toMessageType(value: String?): MessageType? = value?.let { MessageType.valueOf(it) }
+
+    @TypeConverter
+    fun fromCampusType(type: CampusType?): String? = type?.name
+
+    @TypeConverter
+    fun toCampusType(value: String?): CampusType? = value?.let { CampusType.valueOf(it) }
+
+    @TypeConverter
+    fun fromStringList(list: List<String>?): String? =
+        list?.joinToString("|||")
+
+    @TypeConverter
+    fun toStringList(value: String?): List<String>? =
+        value?.let { if (it.isEmpty()) emptyList() else it.split("|||") }
 }
