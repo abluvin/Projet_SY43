@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,43 +22,28 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import com.example.projet.data.ChatItem
 import com.example.projet.data.ScheduleParser
+import com.example.projet.ui.Register.Connexion
+import com.example.projet.ui.Register.Register
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
-import com.example.projet.ui.Register.Connexion
-import com.example.projet.ui.Register.Register
 import com.example.projet.ui.chat.ChatScreen
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
 import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
-import com.example.projet.ui.home.PostViewModel
 import com.example.projet.ui.restaurant.MenuScreen
-import com.example.projet.ui.sessions.CollaborationViewModel
 import com.example.projet.ui.theme.ProjetTheme
 
-object Routes {
-    const val HOME = "home"
-    const val AGENDA = "agenda"
-    const val CHAT = "chat"
-    const val GROUPS = "groups"
-    const val MENU = "menu"
-    const val CREATE_POST = "create_post"
-    const val CONVERSATION = "conversation/{chatItemId}"
-    const val COURSE_HUB = "course_hub"
-    fun conversation(id: Int) = "conversation/$id"
+enum class Screen {
+    HOME, AGENDA, CHAT, GROUPS, MENU, CREATE_POST, CONVERSATION, COURSE_HUB
 }
 
 data class BottomNavItem(
-    val route: String,
+    val screen: Screen,
     val label: String,
     val icon: ImageVector
 )
@@ -78,38 +62,33 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class AppState { LOGIN, REGISTER, WELCOME, MAIN }
+private enum class AppState { REGISTER, LOGIN, WELCOME, MAIN }
 
 @Composable
 fun AppRoot() {
-    var appState by remember { mutableStateOf(AppState.LOGIN) }
+    var appState by remember { mutableStateOf(AppState.REGISTER) }
     var username by remember { mutableStateOf("") }
-    var userId by remember { mutableStateOf(0) }
 
-    Crossfade(targetState = appState, label = "auth_state") { state ->
-        when (state) {
-            AppState.LOGIN -> Connexion(
-                onLoggedIn = { name, id ->
-                    username = name
-                    userId = id
-                    appState = AppState.MAIN
-                },
-                onNavigateToRegister = { appState = AppState.REGISTER }
-            )
-            AppState.REGISTER -> Register(
-                onRegistered = { name, id ->
-                    username = name
-                    userId = id
-                    appState = AppState.WELCOME
-                },
-                onNavigateToLogin = { appState = AppState.LOGIN }
-            )
-            AppState.WELCOME -> WelcomeScreen(
-                username = username,
-                onContinue = { appState = AppState.MAIN }
-            )
-            AppState.MAIN -> MainApp(username = username, userId = userId)
-        }
+    when (appState) {
+        AppState.REGISTER -> Register(
+            onRegistered = { name ->
+                username = name
+                appState = AppState.WELCOME
+            },
+            onGoToLogin = { appState = AppState.LOGIN }
+        )
+        AppState.LOGIN -> Connexion(
+            onLoggedIn = { name ->
+                username = name
+                appState = AppState.MAIN
+            },
+            onGoToRegister = { appState = AppState.REGISTER }
+        )
+        AppState.WELCOME -> WelcomeScreen(
+            username = username,
+            onContinue = { appState = AppState.MAIN }
+        )
+        AppState.MAIN -> MainApp(username = username)
     }
 }
 
@@ -154,46 +133,44 @@ fun WelcomeScreen(username: String, onContinue: () -> Unit) {
 }
 
 @Composable
-fun MainApp(username: String = "", userId: Int = 0) {
+fun MainApp(username: String = "") {
+    var currentScreen by remember { mutableStateOf(Screen.HOME) }
+    var previousScreen by remember { mutableStateOf(Screen.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
     var showNewChatDialog by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
     var pasteText by remember { mutableStateOf("") }
+    
+    var selectedChatItem by remember { mutableStateOf<ChatItem?>(null) }
 
     val agendaVM: AgendaViewModel = viewModel()
-    val collaborationVM: CollaborationViewModel = viewModel()
-    val postVM: PostViewModel = viewModel()
-    val collaborationUserId = "user_${username.lowercase().replace(" ", "_")}"
 
-    val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
-
-    val bottomNavRoutes = setOf(Routes.HOME, Routes.AGENDA, Routes.CHAT, Routes.GROUPS, Routes.MENU)
     val navItems = listOf(
-        BottomNavItem(Routes.HOME, "Accueil", Icons.Filled.Home),
-        BottomNavItem(Routes.AGENDA, "Agenda", Icons.Filled.CalendarMonth),
-        BottomNavItem(Routes.CHAT, "Chat", Icons.Filled.Forum),
-        BottomNavItem(Routes.GROUPS, "Collab", Icons.Filled.Groups),
-        BottomNavItem(Routes.MENU, "Restaurant", Icons.Filled.Restaurant)
+        BottomNavItem(Screen.HOME, "Accueil", Icons.Filled.Home),
+        BottomNavItem(Screen.AGENDA, "Agenda", Icons.Filled.DateRange),
+        BottomNavItem(Screen.CHAT, "Chat", Icons.Filled.Chat),
+        BottomNavItem(Screen.GROUPS, "Groupes", Icons.Filled.Groups),
+        BottomNavItem(Screen.MENU, "Resto", Icons.Filled.Restaurant)
     )
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (currentRoute in bottomNavRoutes && !showCamera) {
+            if (currentScreen != Screen.CREATE_POST && currentScreen != Screen.CONVERSATION && currentScreen != Screen.COURSE_HUB) {
                 NavigationBar(modifier = Modifier.fillMaxWidth()) {
                     navItems.forEach { item ->
                         NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
-                            selected = currentRoute == item.route,
+                            icon = {
+                                Icon(item.icon, contentDescription = item.label)
+                            },
+                            label = {
+                                Text(item.label, style = MaterialTheme.typography.labelSmall)
+                            },
+                            selected = currentScreen == item.screen,
                             onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                if (!showCamera) {
+                                    currentScreen = item.screen
                                 }
                             }
                         )
@@ -207,74 +184,64 @@ fun MainApp(username: String = "", userId: Int = 0) {
                 onTextRecognized = { text ->
                     recognizedText = text
                     showCamera = false
+                    val events = ScheduleParser.parseScheduleText(text)
                 },
                 onBack = { showCamera = false }
             )
         } else {
-            NavHost(
-                navController = navController,
-                startDestination = Routes.HOME,
-                modifier = Modifier.padding(innerPadding)
-            ) {
-                composable(Routes.HOME) {
-                    HomeScreen(
-                        username = username,
-                        currentUserId = userId,
-                        postVm = postVM,
-                        onCreatePostClick = { navController.navigate(Routes.CREATE_POST) }
-                    )
+            when (currentScreen) {
+                Screen.HOME -> HomeScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    username = username,
+                    onCreatePostClick = {
+                        previousScreen = Screen.HOME
+                        currentScreen = Screen.CREATE_POST
+                    }
+                )
+                Screen.AGENDA -> AgendaScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    onCameraClick = { showCamera = true },
+                    onPasteClick = { showPasteDialog = true },
+                    vm = agendaVM
+                )
+                Screen.CHAT -> ChatScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    onConversationClick = { chatItem ->
+                        selectedChatItem = chatItem
+                        currentScreen = Screen.CONVERSATION
+                    },
+                    onCourseHubClick = {
+                        currentScreen = Screen.COURSE_HUB
+                    },
+                    onNewChatClick = {
+                        showNewChatDialog = true
+                    }
+                )
+                Screen.GROUPS -> PlaceholderScreen(
+                    "Groupes",
+                    Modifier.padding(innerPadding)
+                )
+                Screen.MENU -> MenuScreen()
+                Screen.CREATE_POST -> CreatePostScreen(
+                    onPostCreated = { text, uri ->
+                        currentScreen = previousScreen
+                    },
+                    onBack = {
+                        currentScreen = previousScreen
+                    }
+                )
+                Screen.CONVERSATION -> {
+                    selectedChatItem?.let { item ->
+                        ConversationScreen(
+                            chatItemId = item.id,
+                            onBack = { currentScreen = Screen.CHAT },
+                        )
+                    }
                 }
-                composable(Routes.AGENDA) {
-                    AgendaScreen(
-                        onCameraClick = { showCamera = true },
-                        onPasteClick = { showPasteDialog = true },
-                        vm = agendaVM
-                    )
-                }
-                composable(Routes.CHAT) {
-                    ChatScreen(
-                        onConversationClick = { chatItem ->
-                            navController.navigate(Routes.conversation(chatItem.id))
-                        },
-                        onCourseHubClick = { navController.navigate(Routes.COURSE_HUB) },
-                        onNewChatClick = { showNewChatDialog = true }
-                    )
-                }
-                composable(Routes.GROUPS) {
-                    CollaborationScreen(
-                        username = username,
-                        userId = collaborationUserId,
-                        vm = collaborationVM
-                    )
-                }
-                composable(Routes.MENU) {
-                    MenuScreen()
-                }
-                composable(Routes.CREATE_POST) {
-                    CreatePostScreen(
-                        onPostCreated = { text, uri ->
-                            postVM.createPost(text, uri?.toString(), userId)
-                            navController.popBackStack()
-                        },
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-                composable(
-                    route = Routes.CONVERSATION,
-                    arguments = listOf(navArgument("chatItemId") { type = NavType.IntType })
-                ) { backStackEntry ->
-                    val chatItemId = backStackEntry.arguments?.getInt("chatItemId") ?: return@composable
-                    ConversationScreen(
-                        chatItemId = chatItemId,
-                        onBack = { navController.popBackStack() }
-                    )
-                }
-                composable(Routes.COURSE_HUB) {
-                    CourseScreen(
-                        courseName = "SY43 - Plateformes Mobiles",
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+                Screen.COURSE_HUB -> CourseScreen(
+                    courseName = "SY43 - Plateformes Mobiles",
+                    onBack = { currentScreen = Screen.CHAT }
+                )
             }
         }
 
