@@ -27,7 +27,7 @@ private val IconBg   = Color(0xFF0E2A5C)
 private val UtbmBlue = Color(0xFF1A57A0)
 
 @Composable
-fun UtbmLogo(modifier: Modifier = Modifier, iconSize: Dp = 40.dp) {
+fun UtbmLogo(modifier: Modifier = Modifier, iconSize: Dp = 40.dp, showText: Boolean = true) {
     val barHeight = (iconSize.value * 0.09f).dp
     val cornerRadius = (iconSize.value * 0.22f).dp
 
@@ -65,29 +65,31 @@ fun UtbmLogo(modifier: Modifier = Modifier, iconSize: Dp = 40.dp) {
             }
         }
 
-        // Wordmark : UTBM + trait + connect
-        Column(verticalArrangement = Arrangement.Center) {
-            Text(
-                text = "UTBM",
-                color = UtbmBlue,
-                fontSize = (iconSize.value * 0.50f).sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-0.5).sp,
-                lineHeight = (iconSize.value * 0.52f).sp
-            )
-            HorizontalDivider(
-                color = UtbmBlue,
-                thickness = 1.5.dp,
-                modifier = Modifier.width((iconSize.value * 1.5f).dp)
-            )
-            Text(
-                text = "connect",
-                color = UtbmBlue,
-                fontSize = (iconSize.value * 0.20f).sp,
-                fontWeight = FontWeight.Light,
-                letterSpacing = 3.sp,
-                lineHeight = (iconSize.value * 0.24f).sp
-            )
+        if (showText) {
+            // Wordmark : UTBM + trait + connect
+            Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = "UTBM",
+                    color = UtbmBlue,
+                    fontSize = (iconSize.value * 0.50f).sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-0.5).sp,
+                    lineHeight = (iconSize.value * 0.52f).sp
+                )
+                HorizontalDivider(
+                    color = UtbmBlue,
+                    thickness = 1.5.dp,
+                    modifier = Modifier.width((iconSize.value * 1.5f).dp)
+                )
+                Text(
+                    text = "connect",
+                    color = UtbmBlue,
+                    fontSize = (iconSize.value * 0.20f).sp,
+                    fontWeight = FontWeight.Light,
+                    letterSpacing = 3.sp,
+                    lineHeight = (iconSize.value * 0.24f).sp
+                )
+            }
         }
     }
 }

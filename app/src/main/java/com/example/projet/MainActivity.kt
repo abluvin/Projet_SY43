@@ -5,7 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,18 +23,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import com.example.projet.data.ChatItem
 import com.example.projet.data.ScheduleParser
+import com.example.projet.ui.Register.Connexion
+import com.example.projet.ui.Register.Register
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
-import com.example.projet.ui.Register.Connexion
-import com.example.projet.ui.Register.Register
 import com.example.projet.ui.chat.ChatScreen
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
@@ -44,9 +38,7 @@ import com.example.projet.ui.admin.AdminScreen
 import com.example.projet.ui.admin.AdminViewModel
 import com.example.projet.ui.home.CreatePostScreen
 import com.example.projet.ui.home.HomeScreen
-import com.example.projet.ui.home.PostViewModel
 import com.example.projet.ui.restaurant.MenuScreen
-import com.example.projet.ui.sessions.CollaborationViewModel
 import com.example.projet.ui.theme.ProjetTheme
 
 object Routes {
@@ -64,7 +56,7 @@ object Routes {
 }
 
 data class BottomNavItem(
-    val route: String,
+    val screen: Screen,
     val label: String,
     val icon: ImageVector
 )
@@ -83,11 +75,11 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class AppState { LOGIN, REGISTER, WELCOME, MAIN }
+private enum class AppState { REGISTER, LOGIN, WELCOME, MAIN }
 
 @Composable
 fun AppRoot() {
-    var appState by remember { mutableStateOf(AppState.LOGIN) }
+    var appState by remember { mutableStateOf(AppState.REGISTER) }
     var username by remember { mutableStateOf("") }
     var userId by remember { mutableStateOf(0) }
     var isAdmin by remember { mutableStateOf(false) }
@@ -172,6 +164,8 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
     var showNewChatDialog by remember { mutableStateOf(false) }
     var recognizedText by remember { mutableStateOf("") }
     var pasteText by remember { mutableStateOf("") }
+    
+    var selectedChatItem by remember { mutableStateOf<ChatItem?>(null) }
 
     val agendaVM: AgendaViewModel = viewModel()
     val collaborationVM: CollaborationViewModel = viewModel()
@@ -199,18 +193,20 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-            if (currentRoute in bottomNavRoutes && !showCamera) {
+            if (currentScreen != Screen.CREATE_POST && currentScreen != Screen.CONVERSATION && currentScreen != Screen.COURSE_HUB) {
                 NavigationBar(modifier = Modifier.fillMaxWidth()) {
                     navItems.forEach { item ->
                         NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label, style = MaterialTheme.typography.labelSmall) },
-                            selected = currentRoute == item.route,
+                            icon = {
+                                Icon(item.icon, contentDescription = item.label)
+                            },
+                            label = {
+                                Text(item.label, style = MaterialTheme.typography.labelSmall)
+                            },
+                            selected = currentScreen == item.screen,
                             onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                if (!showCamera) {
+                                    currentScreen = item.screen
                                 }
                             }
                         )
@@ -224,6 +220,7 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
                 onTextRecognized = { text ->
                     recognizedText = text
                     showCamera = false
+                    val events = ScheduleParser.parseScheduleText(text)
                 },
                 onBack = { showCamera = false }
             )
@@ -310,6 +307,10 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
                         onBack = { navController.popBackStack() }
                     )
                 }
+                Screen.COURSE_HUB -> CourseScreen(
+                    courseName = "SY43 - Plateformes Mobiles",
+                    onBack = { currentScreen = Screen.CHAT }
+                )
             }
         }
 
