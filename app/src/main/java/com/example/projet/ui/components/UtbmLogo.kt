@@ -27,7 +27,7 @@ private val IconBg   = Color(0xFF0E2A5C)
 private val UtbmBlue = Color(0xFF1A57A0)
 
 @Composable
-fun UtbmLogo(modifier: Modifier = Modifier, iconSize: Dp = 40.dp) {
+fun UtbmLogo(modifier: Modifier = Modifier, iconSize: Dp = 40.dp, showText: Boolean = true) {
     val barHeight = (iconSize.value * 0.09f).dp
     val cornerRadius = (iconSize.value * 0.22f).dp
 
@@ -66,7 +66,7 @@ fun UtbmLogo(modifier: Modifier = Modifier, iconSize: Dp = 40.dp) {
         }
 
         // Wordmark : UTBM + trait + connect
-        Column(verticalArrangement = Arrangement.Center) {
+        if (showText) Column(verticalArrangement = Arrangement.Center) {
             Text(
                 text = "UTBM",
                 color = UtbmBlue,
@@ -91,3 +91,4 @@ fun UtbmLogo(modifier: Modifier = Modifier, iconSize: Dp = 40.dp) {
         }
     }
 }
+
