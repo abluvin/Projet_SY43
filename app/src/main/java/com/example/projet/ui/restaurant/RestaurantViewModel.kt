@@ -13,6 +13,7 @@ import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.*
 
 sealed class MenuState {
     object Idle : MenuState()
@@ -30,8 +31,27 @@ class RestaurantViewModel : ViewModel() {
     private val _menuState = MutableStateFlow<MenuState>(MenuState.Idle)
     val menuState: StateFlow<MenuState> = _menuState.asStateFlow()
 
+    private val _gpsDetected = MutableStateFlow(false)
+    val gpsDetected: StateFlow<Boolean> = _gpsDetected.asStateFlow()
+
     init {
         fetchMenu()
+    }
+
+    fun detectNearestRestaurant(lat: Double, lon: Double) {
+        val nearest = AvailableRestaurants.minByOrNull { haversineKm(lat, lon, it.latitude, it.longitude) }
+        nearest?.let {
+            _gpsDetected.value = true
+            selectRestaurant(it)
+        }
+    }
+
+    private fun haversineKm(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371.0
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = sin(dLat / 2).pow(2) + cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) * sin(dLon / 2).pow(2)
+        return r * 2 * atan2(sqrt(a), sqrt(1 - a))
     }
 
     fun selectRestaurant(restaurant: RestaurantInfo) {
