@@ -66,7 +66,7 @@ fun CourseScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
     ) { padding ->
@@ -74,7 +74,7 @@ fun CourseScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(Color(0xFFF7F7F7))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             LazyColumn(
                 state = listState,
@@ -88,14 +88,14 @@ fun CourseScreen(
                 item {
                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Surface(
-                            color = Color(0xFFE0E0E0),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
                                 "Seul le professeur peut envoyer des messages",
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                                 fontSize = 12.sp,
-                                color = Color.DarkGray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -131,7 +131,7 @@ fun CourseScreen(
             Surface(
                 tonalElevation = 4.dp,
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 if (isProf) {
                     Column(
@@ -274,7 +274,7 @@ fun AnnouncementCard(message: Message) {
             Text(
                 text = message.text,
                 fontSize = 15.sp,
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -288,17 +288,17 @@ fun HubMessageCard(message: Message) {
         horizontalArrangement = Arrangement.Start
     ) {
         Surface(
-            color = Color.White,
+            color = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 2.dp),
             shadowElevation = 1.dp,
             modifier = Modifier.widthIn(max = 300.dp)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = message.text, fontSize = 15.sp)
+                Text(text = message.text, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text(
                     text = message.time,
                     fontSize = 10.sp,
-                    color = Color.LightGray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                     modifier = Modifier.align(Alignment.End)
                 )
             }

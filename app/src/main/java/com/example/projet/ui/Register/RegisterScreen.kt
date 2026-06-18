@@ -70,7 +70,10 @@ fun Register(
     val state by vm.registerState.collectAsState()
     LaunchedEffect(state) {
         when (val s = state) {
-            is UserViewModel.RegisterState.Success -> onRegistered(s.name, s.id, s.isAdmin, s.role)
+            is UserViewModel.RegisterState.Success -> {
+                onRegistered(s.name, s.id, s.isAdmin, s.role)
+                vm.resetState()
+            }
             is UserViewModel.RegisterState.EmailExists -> errorMessage = "Cet email est déjà utilisé."
             is UserViewModel.RegisterState.InvalidEmail -> errorMessage = "L'email doit être au format prénom.nom@utbm.fr"
             else -> {}
@@ -102,7 +105,7 @@ fun Register(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(

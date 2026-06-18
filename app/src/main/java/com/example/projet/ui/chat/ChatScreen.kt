@@ -87,7 +87,7 @@ fun ChatScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             // Header
             ChatHeader()
@@ -210,8 +210,8 @@ fun SearchBar() {
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
         shape = RoundedCornerShape(28.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = Color(0xFFF1F3F4),
-            focusedContainerColor = Color(0xFFF1F3F4),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             unfocusedBorderColor = Color.Transparent,
             focusedBorderColor = Color.Transparent
         ),
@@ -330,7 +330,7 @@ fun ChatListItem(item: ChatItem, lastMessage: String, onClick: () -> Unit) {
                         modifier = Modifier
                             .size(14.dp)
                             .clip(CircleShape)
-                            .background(Color.White)
+                            .background(MaterialTheme.colorScheme.background)
                             .align(Alignment.BottomEnd)
                     ) {
                         Box(
@@ -378,7 +378,7 @@ fun ChatListItem(item: ChatItem, lastMessage: String, onClick: () -> Unit) {
                     } else {
                         Text(
                             text = lastMessage,
-                            color = if (item.unreadCount > 0) Color.Black else Color.Gray,
+                            color = if (item.unreadCount > 0) MaterialTheme.colorScheme.onSurface else Color.Gray,
                             fontSize = 14.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
