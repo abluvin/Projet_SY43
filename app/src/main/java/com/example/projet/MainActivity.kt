@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -47,6 +48,8 @@ import com.example.projet.ui.home.HomeScreen
 import com.example.projet.ui.home.PostViewModel
 import com.example.projet.ui.restaurant.MenuScreen
 import com.example.projet.ui.sessions.CollaborationViewModel
+import com.example.projet.ui.profile.ProfileScreen
+import com.example.projet.ui.settings.SettingsScreen
 import com.example.projet.ui.theme.ProjetTheme
 
 object Routes {
@@ -56,6 +59,8 @@ object Routes {
     const val GROUPS = "groups"
     const val MENU = "menu"
     const val ADMIN = "admin"
+    const val SETTINGS = "settings"
+    const val PROFILE = "profile"
     const val CREATE_POST = "create_post"
     const val CONVERSATION = "conversation/{chatItemId}"
     const val COURSE_HUB = "course_hub/{chatItemId}"
@@ -76,8 +81,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ProjetTheme {
-                AppRoot()
+            val systemDarkTheme = isSystemInDarkTheme()
+            var isDarkTheme by remember { mutableStateOf(systemDarkTheme) }
+            ProjetTheme(darkTheme = isDarkTheme) {
+                AppRoot(
+                    isDarkTheme = isDarkTheme,
+                    onToggleDarkTheme = { isDarkTheme = it }
+                )
             }
         }
     }
@@ -86,7 +96,10 @@ class MainActivity : ComponentActivity() {
 private enum class AppState { LOGIN, REGISTER, WELCOME, MAIN }
 
 @Composable
-fun AppRoot() {
+fun AppRoot(
+    isDarkTheme: Boolean = false,
+    onToggleDarkTheme: (Boolean) -> Unit = {}
+) {
     var appState by remember { mutableStateOf(AppState.LOGIN) }
     var username by remember { mutableStateOf("") }
     var userId by remember { mutableStateOf(0) }
@@ -119,7 +132,21 @@ fun AppRoot() {
                 username = username,
                 onContinue = { appState = AppState.MAIN }
             )
-            AppState.MAIN -> MainApp(username = username, userId = userId, isAdmin = isAdmin, userRole = userRole)
+            AppState.MAIN -> MainApp(
+                username = username,
+                userId = userId,
+                isAdmin = isAdmin,
+                userRole = userRole,
+                isDarkTheme = isDarkTheme,
+                onToggleDarkTheme = onToggleDarkTheme,
+                onLogout = {
+                    username = ""
+                    userId = 0
+                    isAdmin = false
+                    userRole = "STUDENT"
+                    appState = AppState.LOGIN
+                }
+            )
         }
     }
 }
@@ -165,7 +192,15 @@ fun WelcomeScreen(username: String, onContinue: () -> Unit) {
 }
 
 @Composable
-fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, userRole: String = "STUDENT") {
+fun MainApp(
+    username: String = "",
+    userId: Int = 0,
+    isAdmin: Boolean = false,
+    userRole: String = "STUDENT",
+    isDarkTheme: Boolean = false,
+    onToggleDarkTheme: (Boolean) -> Unit = {},
+    onLogout: () -> Unit = {}
+) {
     val isProf = userRole == "PROFESSOR"
     var showCamera by remember { mutableStateOf(false) }
     var showPasteDialog by remember { mutableStateOf(false) }
@@ -239,7 +274,9 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
                         currentUserId = userId,
                         isAdmin = isAdmin,
                         postVm = postVM,
-                        onCreatePostClick = { navController.navigate(Routes.CREATE_POST) }
+                        onCreatePostClick = { navController.navigate(Routes.CREATE_POST) },
+                        onSettingsClick = { navController.navigate(Routes.SETTINGS) },
+                        onProfileClick = { navController.navigate(Routes.PROFILE) }
                     )
                 }
                 composable(Routes.AGENDA) {
@@ -278,6 +315,20 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
                 }
                 composable(Routes.ADMIN) {
                     AdminScreen(currentUserId = userId, vm = adminVM)
+                }
+                composable(Routes.SETTINGS) {
+                    SettingsScreen(
+                        isDarkTheme = isDarkTheme,
+                        onToggleDarkTheme = onToggleDarkTheme,
+                        onBack = { navController.popBackStack() },
+                        onLogout = onLogout
+                    )
+                }
+                composable(Routes.PROFILE) {
+                    ProfileScreen(
+                        userId = userId,
+                        onBack = { navController.popBackStack() }
+                    )
                 }
                 composable(Routes.CREATE_POST) {
                     CreatePostScreen(
