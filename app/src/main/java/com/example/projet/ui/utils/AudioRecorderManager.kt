@@ -58,17 +58,24 @@ class AudioRecorderManager(private val context: Context) {
         }
     }
 
-    fun playRecording(filePath: String) {
+    fun playRecording(filePath: String, onComplete: () -> Unit = {}) {
         try {
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(filePath)
                 prepare()
+                setOnCompletionListener { onComplete() }
                 start()
             }
         } catch (e: IOException) {
             e.printStackTrace()
         }
     }
+
+    fun getDuration(): Int = mediaPlayer?.duration ?: 0
+
+    fun getCurrentPosition(): Int = try {
+        mediaPlayer?.currentPosition ?: 0
+    } catch (e: IllegalStateException) { 0 }
 
     fun stopPlayback() {
         mediaPlayer?.apply {

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Settings
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +46,12 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -52,6 +59,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -66,6 +75,7 @@ import com.example.projet.R
 import com.example.projet.data.Post
 import com.example.projet.data.Poll
 import com.example.projet.data.VoiceMessage
+import com.example.projet.ui.utils.AudioRecorderManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -169,14 +179,48 @@ fun PostBloc(
     currentUserId: Int,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val audioManager = remember { AudioRecorderManager(context) }
+    var recordedFilePath by remember { mutableStateOf<String?>(null) }
+    var playingVoiceId by remember { mutableStateOf<Int?>(null) }
+    var isPostAudioPlaying by remember { mutableStateOf(false) }
+    var playbackProgress by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(isPostAudioPlaying, playingVoiceId) {
+        if (isPostAudioPlaying || playingVoiceId != null) {
+            while (isPostAudioPlaying || playingVoiceId != null) {
+                val duration = audioManager.getDuration()
+                val position = audioManager.getCurrentPosition()
+                playbackProgress = if (duration > 0) position.toFloat() / duration else 0f
+                kotlinx.coroutines.delay(100)
+            }
+        } else {
+            playbackProgress = 0f
+        }
+    }
+    var isRecording by remember { mutableStateOf(false) }
+    var recordingTime by remember { mutableStateOf(0L) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted && audioManager.startRecording()) {
+            isRecording = true
+            recordingTime = 0L
+            recordedFilePath = null
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { audioManager.cleanup() }
+    }
+
     var expanded by remember { mutableStateOf(false) }
     var showComments by remember { mutableStateOf(false) }
     var showVoiceMessages by remember { mutableStateOf(false) }
     var showPolls by remember { mutableStateOf(false) }
     var showCreatePoll by remember { mutableStateOf(false) }
     var showRecordAudio by remember { mutableStateOf(false) }
-    var isRecording by remember { mutableStateOf(false) }
-    var recordingTime by remember { mutableStateOf(0L) }
     var newCommentText by remember { mutableStateOf("") }
     var pollQuestion by remember { mutableStateOf("") }
     var pollOptions by remember { mutableStateOf(listOf("", "")) }
@@ -239,6 +283,44 @@ fun PostBloc(
                         text = post.text,
                         color = Color.White.copy(alpha = 0.9f)
                     )
+                    val voicePath = post.voiceFilePath
+                    if (voicePath != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = {
+                                if (isPostAudioPlaying) {
+                                    audioManager.stopPlayback()
+                                    isPostAudioPlaying = false
+                                } else {
+                                    playingVoiceId?.let { audioManager.stopPlayback(); playingVoiceId = null }
+                                    audioManager.playRecording(voicePath) { isPostAudioPlaying = false }
+                                    isPostAudioPlaying = true
+                                }
+                            }) {
+                                Icon(
+                                    if (isPostAudioPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                                    contentDescription = if (isPostAudioPlaying) "Arrêter" else "Écouter",
+                                    tint = if (isPostAudioPlaying) Color(0xFF4CAF50) else Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                if (isPostAudioPlaying) {
+                                    LinearProgressIndicator(
+                                        progress = { playbackProgress },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        color = Color(0xFF4CAF50),
+                                        trackColor = Color.White.copy(alpha = 0.3f)
+                                    )
+                                }
+                                Text(
+                                    text = "${post.voiceDuration / 1000}s",
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    }
                     if (post.isPoll && polls.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
                         polls.forEach { poll ->
@@ -372,9 +454,34 @@ fun PostBloc(
                                             .fillMaxWidth()
                                             .padding(vertical = 4.dp)
                                     ) {
-                                        Icon(Icons.Filled.Mic, contentDescription = "Audio", tint = Color.White, modifier = Modifier.size(20.dp))
-                                        Spacer(modifier = Modifier.padding(start = 8.dp))
+                                        IconButton(onClick = {
+                                            if (playingVoiceId == voiceMsg.id) {
+                                                audioManager.stopPlayback()
+                                                playingVoiceId = null
+                                            } else {
+                                                if (isPostAudioPlaying) { audioManager.stopPlayback(); isPostAudioPlaying = false }
+                                                playingVoiceId?.let { audioManager.stopPlayback() }
+                                                audioManager.playRecording(voiceMsg.filePath) { playingVoiceId = null }
+                                                playingVoiceId = voiceMsg.id
+                                            }
+                                        }) {
+                                            Icon(
+                                                if (playingVoiceId == voiceMsg.id) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                                                contentDescription = if (playingVoiceId == voiceMsg.id) "Arrêter" else "Lire",
+                                                tint = if (playingVoiceId == voiceMsg.id) Color(0xFF4CAF50) else Color.White,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
                                         Column(modifier = Modifier.weight(1f)) {
+                                            if (playingVoiceId == voiceMsg.id) {
+                                                LinearProgressIndicator(
+                                                    progress = { playbackProgress },
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    color = Color(0xFF4CAF50),
+                                                    trackColor = Color.White.copy(alpha = 0.3f)
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                            }
                                             Text(
                                                 text = "Durée: ${voiceMsg.duration / 1000}s",
                                                 color = Color.White,
@@ -418,7 +525,7 @@ fun PostBloc(
                                         .padding(12.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    if (!isRecording) {
+                                    if (!isRecording && recordedFilePath == null) {
                                         Text(
                                             text = "Appuyez pour enregistrer",
                                             color = Color.White,
@@ -426,54 +533,64 @@ fun PostBloc(
                                             modifier = Modifier.padding(bottom = 12.dp)
                                         )
                                         ElevatedButton(
-                                            onClick = { isRecording = true; recordingTime = 0L },
+                                            onClick = {
+                                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                                    if (audioManager.startRecording()) {
+                                                        isRecording = true
+                                                        recordingTime = 0L
+                                                        recordedFilePath = null
+                                                    }
+                                                } else {
+                                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                                }
+                                            },
                                             modifier = Modifier.size(80.dp),
                                             shape = RoundedCornerShape(50)
                                         ) {
                                             Icon(Icons.Filled.Mic, contentDescription = "Démarrer", modifier = Modifier.size(40.dp))
                                         }
-                                    } else {
+                                    } else if (isRecording) {
                                         Row(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.Center,
                                             modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Icon(
-                                                Icons.Filled.Mic,
-                                                contentDescription = "Enregistrement",
-                                                tint = Color.Red,
-                                                modifier = Modifier.size(24.dp)
-                                            )
+                                            Icon(Icons.Filled.Mic, contentDescription = "Enregistrement", tint = Color.Red, modifier = Modifier.size(24.dp))
                                             Spacer(modifier = Modifier.padding(start = 8.dp))
-                                            Text(
-                                                text = "Durée: ${recordingTime / 1000}s",
-                                                color = Color.White,
-                                                fontSize = 16.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                            Text(text = "${recordingTime / 1000}s", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                                         }
                                         Spacer(modifier = Modifier.height(12.dp))
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            modifier = Modifier.fillMaxWidth()
+                                        ElevatedButton(
+                                            onClick = {
+                                                audioManager.stopRecording()
+                                                recordedFilePath = audioManager.getRecordingFilePath()
+                                                isRecording = false
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = ButtonDefaults.elevatedButtonColors(containerColor = Color.Red.copy(alpha = 0.8f))
                                         ) {
+                                            Icon(Icons.Filled.Stop, contentDescription = "Arrêter", modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.padding(start = 4.dp))
+                                            Text("Arrêter")
+                                        }
+                                    } else {
+                                        Icon(Icons.Filled.CheckCircle, contentDescription = "Prêt", tint = Color(0xFF4CAF50), modifier = Modifier.size(36.dp))
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(text = "Prêt — ${recordingTime / 1000}s", color = Color.White, fontSize = 14.sp)
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                                             ElevatedButton(
-                                                onClick = { isRecording = false; recordingTime = 0L },
-                                                modifier = Modifier.weight(1f),
-                                                colors = androidx.compose.material3.ButtonDefaults.elevatedButtonColors(
-                                                    containerColor = Color.Red.copy(alpha = 0.8f)
-                                                )
-                                            ) {
-                                                Icon(Icons.Filled.Stop, contentDescription = "Arrêter", modifier = Modifier.size(18.dp))
-                                                Spacer(modifier = Modifier.padding(start = 4.dp))
-                                                Text("Arrêter")
-                                            }
+                                                onClick = { recordedFilePath = null; recordingTime = 0L },
+                                                modifier = Modifier.weight(1f)
+                                            ) { Text("Recommencer") }
                                             ElevatedButton(
                                                 onClick = {
-                                                    // Simuler l'ajout d'un message vocal
-                                                    vm.addVoiceMessage(post.id, currentUserId, "recording_${post.id}.3gp", recordingTime * 1000)
+                                                    recordedFilePath?.let { path ->
+                                                        vm.addVoiceMessage(post.id, currentUserId, path, recordingTime)
+                                                    }
                                                     isRecording = false
                                                     recordingTime = 0L
+                                                    recordedFilePath = null
                                                     showRecordAudio = false
                                                 },
                                                 modifier = Modifier.weight(1f)

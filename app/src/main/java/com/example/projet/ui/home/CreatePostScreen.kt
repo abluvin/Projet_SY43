@@ -1,8 +1,11 @@
 package com.example.projet.ui.home
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +19,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -23,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.example.projet.ui.utils.AudioRecorderManager
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
@@ -37,18 +42,36 @@ fun CreatePostScreen(
     onPostCreated: (String, Uri?, String?, Long, Boolean, List<String>) -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val audioManager = remember { AudioRecorderManager(context) }
+
     var postType by remember { mutableStateOf(PostType.TEXT) }
     var postText by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var isRecording by remember { mutableStateOf(false) }
     var recordingTime by remember { mutableStateOf(0L) }
+    var recordedFilePath by remember { mutableStateOf<String?>(null) }
     var pollQuestion by remember { mutableStateOf("") }
     var pollOptions by remember { mutableStateOf(listOf("", "")) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted && audioManager.startRecording()) {
+            isRecording = true
+            recordingTime = 0L
+            recordedFilePath = null
+        }
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         selectedImageUri = uri
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { audioManager.cleanup() }
     }
 
     // Timer pour l'enregistrement audio
@@ -114,7 +137,27 @@ fun CreatePostScreen(
             // Contenu selon le type de post
             when (postType) {
                 PostType.TEXT -> TextPostContent(postText, { postText = it }, selectedImageUri, { selectedImageUri = it }, launcher)
-                PostType.VOICE -> VoicePostContent(isRecording, { isRecording = it }, recordingTime, { recordingTime = it })
+                PostType.VOICE -> VoicePostContent(
+                    isRecording = isRecording,
+                    onStartRecording = {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                            if (audioManager.startRecording()) {
+                                isRecording = true
+                                recordingTime = 0L
+                                recordedFilePath = null
+                            }
+                        } else {
+                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    },
+                    onStopRecording = {
+                        audioManager.stopRecording()
+                        recordedFilePath = audioManager.getRecordingFilePath()
+                        isRecording = false
+                    },
+                    recordingTime = recordingTime,
+                    recordedFilePath = recordedFilePath
+                )
                 PostType.POLL -> PollPostContent(pollQuestion, { pollQuestion = it }, pollOptions, { pollOptions = it })
             }
 
@@ -130,8 +173,8 @@ fun CreatePostScreen(
                             }
                         }
                         PostType.VOICE -> {
-                            if (recordingTime > 0) {
-                                onPostCreated("Message vocal", null, "voice_post_${System.currentTimeMillis()}.3gp", recordingTime, false, emptyList())
+                            recordedFilePath?.let { path ->
+                                onPostCreated("Message vocal", null, path, recordingTime, false, emptyList())
                             }
                         }
                         PostType.POLL -> {
@@ -144,7 +187,7 @@ fun CreatePostScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = when (postType) {
                     PostType.TEXT -> postText.isNotBlank() || selectedImageUri != null
-                    PostType.VOICE -> recordingTime > 0
+                    PostType.VOICE -> recordedFilePath != null && !isRecording
                     PostType.POLL -> pollQuestion.isNotBlank() && pollOptions.count { it.isNotBlank() } >= 2
                 }
             ) {
@@ -202,9 +245,10 @@ private fun TextPostContent(
 @Composable
 private fun VoicePostContent(
     isRecording: Boolean,
-    onRecordingChange: (Boolean) -> Unit,
+    onStartRecording: () -> Unit,
+    onStopRecording: () -> Unit,
     recordingTime: Long,
-    onTimeChange: (Long) -> Unit
+    recordedFilePath: String?
 ) {
     Column(
         modifier = Modifier
@@ -221,7 +265,7 @@ private fun VoicePostContent(
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        if (!isRecording) {
+        if (!isRecording && recordedFilePath == null) {
             Text(
                 text = "Appuyez pour enregistrer",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -229,44 +273,38 @@ private fun VoicePostContent(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
             ElevatedButton(
-                onClick = { onRecordingChange(true); onTimeChange(0L) },
+                onClick = onStartRecording,
                 modifier = Modifier.size(100.dp),
                 shape = RoundedCornerShape(50)
             ) {
                 Icon(Icons.Filled.Mic, contentDescription = "Démarrer", modifier = Modifier.size(50.dp))
             }
-        } else {
+        } else if (isRecording) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    Icons.Filled.Mic,
-                    contentDescription = "Enregistrement",
-                    tint = Color.Red,
-                    modifier = Modifier.size(28.dp)
-                )
+                Icon(Icons.Filled.Mic, contentDescription = "Enregistrement", tint = Color.Red, modifier = Modifier.size(28.dp))
                 Spacer(modifier = Modifier.padding(start = 12.dp))
-                Text(
-                    text = "Durée: ${recordingTime / 1000}s",
-                    color = Color.Red,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = "${recordingTime / 1000}s", color = Color.Red, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(16.dp))
             ElevatedButton(
-                onClick = { onRecordingChange(false) },
+                onClick = onStopRecording,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.elevatedButtonColors(
-                    containerColor = Color.Red.copy(alpha = 0.8f)
-                )
+                colors = ButtonDefaults.elevatedButtonColors(containerColor = Color.Red.copy(alpha = 0.8f))
             ) {
                 Icon(Icons.Filled.Stop, contentDescription = "Arrêter", modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.padding(start = 8.dp))
                 Text("Arrêter l'enregistrement")
             }
+        } else {
+            Icon(Icons.Filled.CheckCircle, contentDescription = "Enregistré", tint = Color(0xFF4CAF50), modifier = Modifier.size(48.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = "Enregistrement prêt — ${recordingTime / 1000}s", fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(12.dp))
+            TextButton(onClick = onStartRecording) { Text("Recommencer", color = Color.Red) }
         }
     }
 }
