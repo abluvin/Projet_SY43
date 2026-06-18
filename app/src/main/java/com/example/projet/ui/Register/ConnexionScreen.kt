@@ -19,6 +19,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import com.example.projet.ui.components.UtbmLogo
 import androidx.compose.material3.Text
@@ -68,7 +69,10 @@ fun Connexion(
     val state by vm.loginState.collectAsState()
     LaunchedEffect(state) {
         when (val s = state) {
-            is UserViewModel.LoginState.Success -> onLoggedIn(s.name, s.id, s.isAdmin, s.role)
+            is UserViewModel.LoginState.Success -> {
+                onLoggedIn(s.name, s.id, s.isAdmin, s.role)
+                vm.resetState()
+            }
             is UserViewModel.LoginState.InvalidEmail -> errorMessage = "L'email doit être au format prénom.nom@utbm.fr"
             is UserViewModel.LoginState.InvalidCredentials -> errorMessage = "Email ou mot de passe incorrect."
             else -> {}
@@ -100,7 +104,7 @@ fun Connexion(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(

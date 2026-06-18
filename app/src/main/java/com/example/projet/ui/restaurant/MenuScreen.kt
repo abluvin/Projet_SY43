@@ -38,7 +38,6 @@ import com.example.projet.ui.theme.BadgeGlutenText
 import com.example.projet.ui.theme.BadgeVeganBg
 import com.example.projet.ui.theme.BadgeVeganText
 import com.example.projet.ui.theme.UtbmBlue
-import com.example.projet.ui.theme.UtbmDarkBlue
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -82,7 +81,7 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
                                 "Restaurant",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
-                                color = UtbmDarkBlue
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 selectedResto.city.uppercase() + " CAMPUS",
@@ -104,18 +103,18 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
                         Icon(
                             Icons.Default.MyLocation,
                             contentDescription = "Détecter campus",
-                            tint = if (gpsDetected) Color(0xFF2ECC71) else UtbmDarkBlue
+                            tint = if (gpsDetected) Color(0xFF2ECC71) else MaterialTheme.colorScheme.onSurface
                         )
                     }
                     IconButton(onClick = { vm.fetchMenu() }) {
                         Icon(
                             Icons.Default.Refresh,
                             contentDescription = "Actualiser",
-                            tint = UtbmDarkBlue
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
     ) { innerPadding ->
@@ -123,7 +122,7 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFFF8FAFC))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             if (gpsDetected) {
                 Row(
@@ -261,7 +260,7 @@ fun MenuContent(menuDays: List<MenuDay>, restaurant: RestaurantInfo) {
                         restaurant.name,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -338,7 +337,7 @@ fun SectionTitle(title: String) {
         text = title,
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
-        color = UtbmDarkBlue,
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.padding(vertical = 16.dp)
     )
 }
@@ -348,8 +347,8 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -377,7 +376,7 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
                         text = title,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f),
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
