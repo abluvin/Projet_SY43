@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -238,6 +239,12 @@ fun PostBloc(
                         text = post.text,
                         color = Color.White.copy(alpha = 0.9f)
                     )
+                    if (post.isPoll && polls.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        polls.forEach { poll ->
+                            PollItem(poll = poll, vm = vm, currentUserId = currentUserId)
+                        }
+                    }
                 }
                 ElevatedButton(
                     onClick = {
@@ -618,7 +625,11 @@ fun PollItem(poll: Poll, vm: PostViewModel, currentUserId: Int) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
-                enabled = !userHasVoted
+                enabled = !userHasVoted,
+                colors = ButtonDefaults.elevatedButtonColors(
+                    disabledContainerColor = Color(0xFF4CAF50),
+                    disabledContentColor = Color.White
+                )
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

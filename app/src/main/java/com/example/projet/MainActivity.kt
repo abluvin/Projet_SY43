@@ -252,15 +252,12 @@ fun MainApp(username: String = "", userId: Int = 0) {
                 }
                 composable(Routes.CREATE_POST) {
                     CreatePostScreen(
-                        onPostCreated = { text, uri, voiceFilePath, voiceDuration, isPoll ->
+                        onPostCreated = { text, uri, voiceFilePath, voiceDuration, isPoll, pollOptions ->
                             if (isPoll) {
-                                // Pour les sondages: text contient la question
-                                postVM.createPostWithPollOptions(text, uri?.toString(), userId, emptyList())
+                                postVM.createPostWithPollOptions(text, uri?.toString(), userId, pollOptions)
                             } else if (voiceFilePath != null) {
-                                // Pour les posts vocaux
                                 postVM.createPost(text, uri?.toString(), userId, voiceFilePath, voiceDuration, false)
                             } else {
-                                // Pour les posts texte normaux
                                 postVM.createPost(text, uri?.toString(), userId)
                             }
                             navController.popBackStack()

@@ -80,10 +80,62 @@ abstract class AppDatabase : RoomDatabase() {
 
         private val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Ajouter les colonnes pour les posts vocaux et sondages
                 database.execSQL("ALTER TABLE `post` ADD COLUMN `voiceFilePath` TEXT")
                 database.execSQL("ALTER TABLE `post` ADD COLUMN `voiceDuration` INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE `post` ADD COLUMN `isPoll` INTEGER NOT NULL DEFAULT 0")
+
+                database.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `voice_message` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `postId` INTEGER NOT NULL,
+                        `userId` INTEGER NOT NULL,
+                        `filePath` TEXT NOT NULL,
+                        `duration` INTEGER NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        FOREIGN KEY(`postId`) REFERENCES `post`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE
+                    )"""
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_voice_message_postId` ON `voice_message` (`postId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_voice_message_userId` ON `voice_message` (`userId`)")
+
+                database.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `poll` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `postId` INTEGER NOT NULL,
+                        `creatorId` INTEGER NOT NULL,
+                        `question` TEXT NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        FOREIGN KEY(`postId`) REFERENCES `post`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`creatorId`) REFERENCES `user`(`id`) ON DELETE CASCADE
+                    )"""
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_postId` ON `poll` (`postId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_creatorId` ON `poll` (`creatorId`)")
+
+                database.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `poll_option` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `pollId` INTEGER NOT NULL,
+                        `text` TEXT NOT NULL,
+                        `voteCount` INTEGER NOT NULL,
+                        FOREIGN KEY(`pollId`) REFERENCES `poll`(`id`) ON DELETE CASCADE
+                    )"""
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_option_pollId` ON `poll_option` (`pollId`)")
+
+                database.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `poll_vote` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `optionId` INTEGER NOT NULL,
+                        `userId` INTEGER NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        FOREIGN KEY(`optionId`) REFERENCES `poll_option`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE
+                    )"""
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_vote_optionId` ON `poll_vote` (`optionId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_vote_userId` ON `poll_vote` (`userId`)")
             }
         }
 

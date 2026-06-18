@@ -58,11 +58,17 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
                 isPoll = true
             )
             val postId = repo.insert(post)
-            
-            // Créer les options du sondage
+
+            val pollId = repo.insertPoll(Poll(
+                postId = postId.toInt(),
+                creatorId = userId,
+                question = text,
+                timestamp = System.currentTimeMillis()
+            ))
+
             options.forEach { optionText ->
                 repo.insertPollOption(PollOption(
-                    pollId = postId.toInt(),
+                    pollId = pollId.toInt(),
                     text = optionText
                 ))
             }

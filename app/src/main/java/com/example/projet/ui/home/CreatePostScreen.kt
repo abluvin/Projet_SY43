@@ -34,7 +34,7 @@ enum class PostType {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePostScreen(
-    onPostCreated: (String, Uri?, String?, Long, Boolean) -> Unit,
+    onPostCreated: (String, Uri?, String?, Long, Boolean, List<String>) -> Unit,
     onBack: () -> Unit
 ) {
     var postType by remember { mutableStateOf(PostType.TEXT) }
@@ -126,17 +126,17 @@ fun CreatePostScreen(
                     when (postType) {
                         PostType.TEXT -> {
                             if (postText.isNotBlank() || selectedImageUri != null) {
-                                onPostCreated(postText, selectedImageUri, null, 0, false)
+                                onPostCreated(postText, selectedImageUri, null, 0, false, emptyList())
                             }
                         }
                         PostType.VOICE -> {
                             if (recordingTime > 0) {
-                                onPostCreated("Message vocal", null, "voice_post_${System.currentTimeMillis()}.3gp", recordingTime, false)
+                                onPostCreated("Message vocal", null, "voice_post_${System.currentTimeMillis()}.3gp", recordingTime, false, emptyList())
                             }
                         }
                         PostType.POLL -> {
-                            if (pollQuestion.isNotBlank() && pollOptions.any { it.isNotBlank() }) {
-                                onPostCreated(pollQuestion, null, null, 0, true)
+                            if (pollQuestion.isNotBlank() && pollOptions.count { it.isNotBlank() } >= 2) {
+                                onPostCreated(pollQuestion, null, null, 0, true, pollOptions.filter { it.isNotBlank() })
                             }
                         }
                     }
