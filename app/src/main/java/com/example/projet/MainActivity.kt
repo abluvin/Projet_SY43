@@ -286,6 +286,14 @@ fun MainApp(username: String = "", userId: Int = 0, isAdmin: Boolean = false, us
                             postVM.createPost(text, uri?.toString(), userId, ue)
                             navController.popBackStack()
                         },
+                        onVoicePostCreated = { filePath, duration ->
+                            postVM.createVoicePost(filePath, duration, userId)
+                            navController.popBackStack()
+                        },
+                        onPollCreated = { question, options ->
+                            postVM.createPostWithPollOptions(question, userId, options)
+                            navController.popBackStack()
+                        },
                         onBack = { navController.popBackStack() }
                     )
                 }

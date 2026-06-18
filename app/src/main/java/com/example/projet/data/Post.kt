@@ -22,5 +22,8 @@ data class Post(
     var idUser: Int,
     var imageUrl: String? = null,
     var timestamp: Long = System.currentTimeMillis(),
-    var ue: String? = null
+    var ue: String? = null,
+    var voiceFilePath: String? = null,
+    var voiceDuration: Long = 0L,
+    var isPoll: Boolean = false
 )

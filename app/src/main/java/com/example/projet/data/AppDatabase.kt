@@ -18,9 +18,13 @@ import com.example.projet.data.dao.*
         User::class,
         Post::class,
         Comment::class,
-        Collaboration::class
+        Collaboration::class,
+        VoiceMessage::class,
+        Poll::class,
+        PollOption::class,
+        PollVote::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -34,6 +38,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun commentDao(): CommentDao
     abstract fun courseMaterialDao(): CourseMaterialDao
     abstract fun collaborationDao(): CollaborationDao
+    abstract fun voiceMessageDao(): VoiceMessageDao
+    abstract fun pollDao(): PollDao
+    abstract fun pollOptionDao(): PollOptionDao
+    abstract fun pollVoteDao(): PollVoteDao
 
     companion object {
         @Volatile
@@ -104,6 +112,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `post` ADD COLUMN `voiceFilePath` TEXT")
+                database.execSQL("ALTER TABLE `post` ADD COLUMN `voiceDuration` INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE `post` ADD COLUMN `isPoll` INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("""CREATE TABLE IF NOT EXISTS `voice_message` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `postId` INTEGER NOT NULL, `userId` INTEGER NOT NULL, `filePath` TEXT NOT NULL, `duration` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, FOREIGN KEY(`postId`) REFERENCES `post`(`id`) ON DELETE CASCADE, FOREIGN KEY(`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE)""")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_voice_message_postId` ON `voice_message` (`postId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_voice_message_userId` ON `voice_message` (`userId`)")
+                database.execSQL("""CREATE TABLE IF NOT EXISTS `poll` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `postId` INTEGER NOT NULL, `creatorId` INTEGER NOT NULL, `question` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, FOREIGN KEY(`postId`) REFERENCES `post`(`id`) ON DELETE CASCADE, FOREIGN KEY(`creatorId`) REFERENCES `user`(`id`) ON DELETE CASCADE)""")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_postId` ON `poll` (`postId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_creatorId` ON `poll` (`creatorId`)")
+                database.execSQL("""CREATE TABLE IF NOT EXISTS `poll_option` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `pollId` INTEGER NOT NULL, `text` TEXT NOT NULL, `voteCount` INTEGER NOT NULL, FOREIGN KEY(`pollId`) REFERENCES `poll`(`id`) ON DELETE CASCADE)""")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_option_pollId` ON `poll_option` (`pollId`)")
+                database.execSQL("""CREATE TABLE IF NOT EXISTS `poll_vote` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `optionId` INTEGER NOT NULL, `userId` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, FOREIGN KEY(`optionId`) REFERENCES `poll_option`(`id`) ON DELETE CASCADE, FOREIGN KEY(`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE)""")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_vote_optionId` ON `poll_vote` (`optionId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_vote_userId` ON `poll_vote` (`userId`)")
+            }
+        }
+
         private val SEED_CALLBACK = object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
@@ -124,7 +151,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                     .addCallback(SEED_CALLBACK)
                     .build().also { INSTANCE = it }
             }
