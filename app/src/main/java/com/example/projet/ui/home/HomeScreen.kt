@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
@@ -93,7 +94,9 @@ fun HomeScreen(
     currentUserId: Int = 0,
     isAdmin: Boolean = false,
     postVm: PostViewModel = viewModel(),
-    onCreatePostClick: () -> Unit = {}
+    onCreatePostClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
     val utbmDarkColor = Color(0xFF001B3C)
     val addIconColor = Color(0xFF5992E4)
@@ -113,13 +116,13 @@ fun HomeScreen(
                     UtbmLogo(iconSize = 32.dp)
                 },
                 navigationIcon = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = utbmDarkColor)
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Réglages", tint = utbmDarkColor)
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search", tint = utbmDarkColor)
+                    IconButton(onClick = onProfileClick) {
+                        Icon(Icons.Filled.Person, contentDescription = "Profil", tint = utbmDarkColor)
                     }
                 }
             )

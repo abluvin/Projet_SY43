@@ -21,7 +21,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     init {
         val db = (application as ProjetApplication).database
         userRepo = UserRepository(db.userDao())
-        postRepo = PostRepository(db.postDao(), db.commentDao())
+        postRepo = PostRepository(db.postDao(), db.commentDao(), db.voiceMessageDao(), db.pollDao(), db.pollOptionDao(), db.pollVoteDao())
     }
 
     private val _user = MutableStateFlow<User?>(null)
