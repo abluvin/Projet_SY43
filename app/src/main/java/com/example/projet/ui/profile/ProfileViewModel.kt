@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.projet.ProjetApplication
+import com.example.projet.data.PasswordUtils
 import com.example.projet.data.User
 import com.example.projet.data.repository.PostRepository
 import com.example.projet.data.repository.UserRepository
@@ -50,5 +51,32 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             userRepo.update(updated)
             _user.value = updated
         }
+    }
+
+    sealed class PasswordResult {
+        object Idle : PasswordResult()
+        object Success : PasswordResult()
+        object WrongCurrent : PasswordResult()
+    }
+
+    private val _passwordResult = MutableStateFlow<PasswordResult>(PasswordResult.Idle)
+    val passwordResult: StateFlow<PasswordResult> = _passwordResult.asStateFlow()
+
+    fun changePassword(currentPassword: String, newPassword: String) {
+        viewModelScope.launch {
+            val current = _user.value ?: return@launch
+            if (current.password != PasswordUtils.hash(currentPassword)) {
+                _passwordResult.value = PasswordResult.WrongCurrent
+                return@launch
+            }
+            val updated = current.copy(password = PasswordUtils.hash(newPassword))
+            userRepo.update(updated)
+            _user.value = updated
+            _passwordResult.value = PasswordResult.Success
+        }
+    }
+
+    fun resetPasswordResult() {
+        _passwordResult.value = PasswordResult.Idle
     }
 }

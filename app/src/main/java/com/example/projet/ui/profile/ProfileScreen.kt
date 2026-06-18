@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.AlertDialog
@@ -34,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,7 +69,9 @@ fun ProfileScreen(
 
     val user by vm.user.collectAsState()
     val postCount by vm.postCount.collectAsState()
+    val passwordResult by vm.passwordResult.collectAsState()
     var showEditDialog by remember { mutableStateOf(false) }
+    var showPasswordDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -142,13 +146,23 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Button(
-                    onClick = { showEditDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = UtbmBlue)
-                ) {
-                    Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Modifier le profil")
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = { showEditDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = UtbmBlue)
+                    ) {
+                        Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Modifier le profil")
+                    }
+                    Button(
+                        onClick = { showPasswordDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = UtbmBlue.copy(alpha = 0.85f))
+                    ) {
+                        Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Mot de passe")
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -193,6 +207,14 @@ fun ProfileScreen(
                     }
                 )
             }
+
+            if (showPasswordDialog) {
+                PasswordChangeDialog(
+                    passwordResult = passwordResult,
+                    onConfirm = { current, new -> vm.changePassword(current, new) },
+                    onDismiss = { showPasswordDialog = false; vm.resetPasswordResult() }
+                )
+            }
         }
     }
 }
@@ -222,6 +244,73 @@ private fun EditProfileDialog(
                 enabled = name.isNotBlank()
             ) {
                 Text("Enregistrer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annuler") }
+        }
+    )
+}
+
+@Composable
+private fun PasswordChangeDialog(
+    passwordResult: ProfileViewModel.PasswordResult,
+    onConfirm: (String, String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var current by remember { mutableStateOf("") }
+    var newPwd by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf("") }
+
+    val mismatch = newPwd.isNotEmpty() && confirm.isNotEmpty() && newPwd != confirm
+    val wrongCurrent = passwordResult is ProfileViewModel.PasswordResult.WrongCurrent
+
+    LaunchedEffect(passwordResult) {
+        if (passwordResult is ProfileViewModel.PasswordResult.Success) onDismiss()
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Changer le mot de passe", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = current,
+                    onValueChange = { current = it },
+                    label = { Text("Mot de passe actuel") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = wrongCurrent,
+                    supportingText = if (wrongCurrent) { { Text("Mot de passe incorrect", color = Color(0xFFD32F2F)) } } else null,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = newPwd,
+                    onValueChange = { newPwd = it },
+                    label = { Text("Nouveau mot de passe") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirm,
+                    onValueChange = { confirm = it },
+                    label = { Text("Confirmer le nouveau mot de passe") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = mismatch,
+                    supportingText = if (mismatch) { { Text("Les mots de passe ne correspondent pas", color = Color(0xFFD32F2F)) } } else null,
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(current, newPwd) },
+                enabled = current.isNotBlank() && newPwd.isNotBlank() && newPwd == confirm,
+                colors = ButtonDefaults.buttonColors(containerColor = UtbmBlue)
+            ) {
+                Text("Confirmer")
             }
         },
         dismissButton = {
