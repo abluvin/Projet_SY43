@@ -21,5 +21,8 @@ data class Event(
     val date: LocalDate,
     val startTime: LocalTime,
     val endTime: LocalTime,
-    val type: EventType
+    val type: EventType,
+    val isGlobal: Boolean = true,
+    val targetUECodes: List<String> = emptyList(),
+    val targetBranches: List<String> = emptyList()
 )

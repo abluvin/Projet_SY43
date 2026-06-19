@@ -10,6 +10,9 @@ class EventRepository(private val dao: EventDao) {
 
     fun getByDate(date: String): Flow<List<Event>> = dao.getByDate(date)
 
+    fun getByDateRange(startDate: String, endDate: String): Flow<List<Event>> =
+        dao.getByDateRange(startDate, endDate)
+
     suspend fun insert(event: Event) = dao.insert(event)
 
     suspend fun insertAll(events: List<Event>) = dao.insertAll(events)

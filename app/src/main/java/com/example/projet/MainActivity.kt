@@ -410,6 +410,7 @@ fun MainApp(
                         onPasteClick = { showPasteDialog = true },
                         isProf = isProf,
                         isAdmin = isAdmin,
+                        userId = userId,
                         vm = agendaVM
                     )
                 }
