@@ -65,31 +65,30 @@ fun UtbmLogo(modifier: Modifier = Modifier, iconSize: Dp = 40.dp, showText: Bool
             }
         }
 
-        if (showText) {
-            // Wordmark : UTBM + trait + connect
-            Column(verticalArrangement = Arrangement.Center) {
-                Text(
-                    text = "UTBM",
-                    color = UtbmBlue,
-                    fontSize = (iconSize.value * 0.50f).sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-0.5).sp,
-                    lineHeight = (iconSize.value * 0.52f).sp
-                )
-                HorizontalDivider(
-                    color = UtbmBlue,
-                    thickness = 1.5.dp,
-                    modifier = Modifier.width((iconSize.value * 1.5f).dp)
-                )
-                Text(
-                    text = "connect",
-                    color = UtbmBlue,
-                    fontSize = (iconSize.value * 0.20f).sp,
-                    fontWeight = FontWeight.Light,
-                    letterSpacing = 3.sp,
-                    lineHeight = (iconSize.value * 0.24f).sp
-                )
-            }
+        // Wordmark : UTBM + trait + connect
+        if (showText) Column(verticalArrangement = Arrangement.Center) {
+            Text(
+                text = "UTBM",
+                color = UtbmBlue,
+                fontSize = (iconSize.value * 0.50f).sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-0.5).sp,
+                lineHeight = (iconSize.value * 0.52f).sp
+            )
+            HorizontalDivider(
+                color = UtbmBlue,
+                thickness = 1.5.dp,
+                modifier = Modifier.width((iconSize.value * 1.5f).dp)
+            )
+            Text(
+                text = "connect",
+                color = UtbmBlue,
+                fontSize = (iconSize.value * 0.20f).sp,
+                fontWeight = FontWeight.Light,
+                letterSpacing = 3.sp,
+                lineHeight = (iconSize.value * 0.24f).sp
+            )
         }
     }
 }
+

@@ -56,8 +56,8 @@ fun ConversationScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    titleContentColor = Color.Black
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -66,7 +66,7 @@ fun ConversationScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(Color(0xFFF7F7F7))
+                .background(MaterialTheme.colorScheme.background)
         ) {
             LazyColumn(
                 state = listState,
@@ -85,7 +85,7 @@ fun ConversationScreen(
             Surface(
                 tonalElevation = 4.dp,
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Row(
                     modifier = Modifier
@@ -129,8 +129,8 @@ fun ConversationScreen(
 
 @Composable
 fun MessageBubble(message: Message) {
-    val bubbleColor = if (message.isFromUser) Color(0xFF0055A4) else Color.White
-    val textColor = if (message.isFromUser) Color.White else Color.Black
+    val bubbleColor = if (message.isFromUser) Color(0xFF0055A4) else MaterialTheme.colorScheme.surfaceVariant
+    val textColor = if (message.isFromUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     val alignment = if (message.isFromUser) Alignment.End else Alignment.Start
     val shape = if (message.isFromUser) {
         RoundedCornerShape(16.dp, 16.dp, 2.dp, 16.dp)

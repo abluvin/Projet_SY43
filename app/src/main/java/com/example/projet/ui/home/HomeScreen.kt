@@ -1,6 +1,7 @@
 package com.example.projet.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,16 +18,28 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -38,12 +51,20 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,7 +77,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.R
+import com.example.projet.data.Poll
+import com.example.projet.data.PollOption
 import com.example.projet.data.Post
+import com.example.projet.data.VoiceMessage
+import com.example.projet.ui.utils.AudioRecorderManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -67,13 +92,21 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     username: String = "",
     currentUserId: Int = 0,
+    isAdmin: Boolean = false,
     postVm: PostViewModel = viewModel(),
-    onCreatePostClick: () -> Unit = {}
+    onCreatePostClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
     val utbmDarkColor = Color(0xFF001B3C)
     val addIconColor = Color(0xFF5992E4)
 
     val posts by postVm.posts.collectAsState()
+    var selectedUe by remember { mutableStateOf<String?>(null) }
+    val ues = remember(posts) { posts.mapNotNull { it.ue }.distinct().sorted() }
+    val filteredPosts = remember(posts, selectedUe) {
+        if (selectedUe == null) posts else posts.filter { it.ue == selectedUe }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -83,13 +116,13 @@ fun HomeScreen(
                     UtbmLogo(iconSize = 32.dp)
                 },
                 navigationIcon = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = utbmDarkColor)
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Réglages", tint = utbmDarkColor)
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Filled.Search, contentDescription = "Search", tint = utbmDarkColor)
+                    IconButton(onClick = onProfileClick) {
+                        Icon(Icons.Filled.Person, contentDescription = "Profil", tint = utbmDarkColor)
                     }
                 }
             )
@@ -129,21 +162,61 @@ fun HomeScreen(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            if (posts.isEmpty()) {
+            // UE filter chips
+            if (ues.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = selectedUe == null,
+                        onClick = { selectedUe = null },
+                        label = { Text("Tout") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF0055A4),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                    ues.forEach { ue ->
+                        FilterChip(
+                            selected = selectedUe == ue,
+                            onClick = { selectedUe = if (selectedUe == ue) null else ue },
+                            label = { Text(ue) },
+                            leadingIcon = {
+                                Icon(Icons.Filled.School, contentDescription = null, modifier = Modifier.size(14.dp))
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF34A853),
+                                selectedLabelColor = Color.White,
+                                selectedLeadingIconColor = Color.White
+                            )
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
+            if (filteredPosts.isEmpty()) {
                 Text(
-                    text = "Aucun post pour l'instant.\nSoyez le premier à publier !",
+                    text = if (selectedUe != null) "Aucun post pour l'UE $selectedUe."
+                           else "Aucun post pour l'instant.\nSoyez le premier à publier !",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                posts.forEach { post ->
+                filteredPosts.forEach { post ->
                     PostBloc(
                         post = post,
                         vm = postVm,
                         currentUserId = currentUserId,
+                        isAdmin = isAdmin,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -158,14 +231,38 @@ fun PostBloc(
     post: Post,
     vm: PostViewModel,
     currentUserId: Int,
+    isAdmin: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val audioManager = remember { AudioRecorderManager(context) }
+    var isPostAudioPlaying by remember { mutableStateOf(false) }
+    var playingVoiceId by remember { mutableStateOf<Int?>(null) }
+    var playbackProgress by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(isPostAudioPlaying, playingVoiceId) {
+        if (isPostAudioPlaying || playingVoiceId != null) {
+            while (isPostAudioPlaying || playingVoiceId != null) {
+                val dur = audioManager.getDuration()
+                val pos = audioManager.getCurrentPosition()
+                playbackProgress = if (dur > 0) pos.toFloat() / dur else 0f
+                kotlinx.coroutines.delay(100)
+            }
+        } else { playbackProgress = 0f }
+    }
+
+    DisposableEffect(Unit) { onDispose { audioManager.cleanup() } }
+
     var expanded by remember { mutableStateOf(false) }
     var showComments by remember { mutableStateOf(false) }
     var newCommentText by remember { mutableStateOf("") }
 
     val commentsFlow = remember(post.id) { vm.getComments(post.id) }
     val comments by commentsFlow.collectAsState(initial = emptyList())
+    val pollsFlow = remember(post.id) { vm.getPolls(post.id) }
+    val polls by pollsFlow.collectAsState(initial = emptyList())
+    val voiceMessagesFlow = remember(post.id) { vm.getVoiceMessages(post.id) }
+    val voiceMessages by voiceMessagesFlow.collectAsState(initial = emptyList())
 
     val dateStr = remember(post.timestamp) {
         SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.FRENCH).format(Date(post.timestamp))
@@ -184,6 +281,23 @@ fun PostBloc(
         color = Color.Transparent
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
+            // UE badge
+            if (post.ue != null) {
+                Surface(
+                    color = Color(0xFF34A853).copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(Icons.Filled.School, contentDescription = null, tint = Color(0xFF34A853), modifier = Modifier.size(12.dp))
+                        Text(post.ue!!, color = Color(0xFF34A853), style = MaterialTheme.typography.labelSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    }
+                }
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -202,10 +316,35 @@ fun PostBloc(
                         fontSize = 12.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = post.text,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
+                    Text(text = post.text, color = Color.White.copy(alpha = 0.9f))
+
+                    // Lecture audio inline pour posts vocaux
+                    val voicePath = post.voiceFilePath
+                    if (voicePath != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = {
+                                if (isPostAudioPlaying) { audioManager.stopPlayback(); isPostAudioPlaying = false }
+                                else { audioManager.playRecording(voicePath) { isPostAudioPlaying = false }; isPostAudioPlaying = true }
+                            }) {
+                                Icon(if (isPostAudioPlaying) Icons.Filled.Stop else Icons.Filled.PlayArrow,
+                                    contentDescription = null, tint = if (isPostAudioPlaying) Color(0xFF4CAF50) else Color.White, modifier = Modifier.size(28.dp))
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                if (isPostAudioPlaying) {
+                                    LinearProgressIndicator(progress = { playbackProgress }, modifier = Modifier.fillMaxWidth(),
+                                        color = Color(0xFF4CAF50), trackColor = Color.White.copy(alpha = 0.3f))
+                                }
+                                Text("${post.voiceDuration / 1000}s", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                            }
+                        }
+                    }
+
+                    // Sondage inline
+                    if (post.isPoll && polls.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        polls.forEach { poll -> PollItem(poll = poll, vm = vm, currentUserId = currentUserId) }
+                    }
                 }
                 ElevatedButton(
                     onClick = {
@@ -225,7 +364,7 @@ fun PostBloc(
                 Column {
                     Row(
                         modifier = Modifier.padding(top = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         IconButton(onClick = {}) {
                             Icon(Icons.Filled.Favorite, contentDescription = "Like", tint = Color.White)
@@ -235,6 +374,36 @@ fun PostBloc(
                         }
                         IconButton(onClick = {}) {
                             Icon(Icons.Filled.Share, contentDescription = "Partager", tint = Color.White)
+                        }
+                        if (isAdmin || post.idUser == currentUserId) {
+                            IconButton(onClick = { vm.deletePost(post) }) {
+                                Icon(Icons.Filled.Delete, contentDescription = "Supprimer", tint = Color(0xFFFF6B6B))
+                            }
+                        }
+                    }
+
+                    // Messages vocaux en réaction
+                    if (voiceMessages.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Vocaux", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        voiceMessages.forEach { vm2 ->
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                                IconButton(onClick = {
+                                    if (playingVoiceId == vm2.id) { audioManager.stopPlayback(); playingVoiceId = null }
+                                    else { isPostAudioPlaying.let { if (it) { audioManager.stopPlayback(); isPostAudioPlaying = false } }; playingVoiceId?.let { audioManager.stopPlayback() }; audioManager.playRecording(vm2.filePath) { playingVoiceId = null }; playingVoiceId = vm2.id }
+                                }) {
+                                    Icon(if (playingVoiceId == vm2.id) Icons.Filled.Stop else Icons.Filled.PlayArrow, contentDescription = null,
+                                        tint = if (playingVoiceId == vm2.id) Color(0xFF4CAF50) else Color.White, modifier = Modifier.size(20.dp))
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    if (playingVoiceId == vm2.id) {
+                                        LinearProgressIndicator(progress = { playbackProgress }, modifier = Modifier.fillMaxWidth(),
+                                            color = Color(0xFF4CAF50), trackColor = Color.White.copy(alpha = 0.3f))
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                    }
+                                    Text("${vm2.duration / 1000}s", color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
+                                }
+                            }
                         }
                     }
 
@@ -294,6 +463,39 @@ fun PostBloc(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun PollItem(poll: Poll, vm: PostViewModel, currentUserId: Int) {
+    val options by vm.getPollOptions(poll.id).collectAsState(initial = emptyList())
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            .clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.1f)).padding(12.dp)
+    ) {
+        Text(poll.question, color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 8.dp))
+        options.forEach { option -> PollOptionRow(option = option, vm = vm, currentUserId = currentUserId) }
+    }
+}
+
+@Composable
+private fun PollOptionRow(option: PollOption, vm: PostViewModel, currentUserId: Int) {
+    val votes by vm.getPollVotes(option.id).collectAsState(initial = emptyList())
+    val userVoted = votes.any { it.userId == currentUserId }
+    ElevatedButton(
+        onClick = { if (!userVoted) vm.votePoll(option.id, currentUserId) },
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        enabled = !userVoted,
+        colors = ButtonDefaults.elevatedButtonColors(
+            disabledContainerColor = Color(0xFF4CAF50),
+            disabledContentColor = Color.White
+        )
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            if (userVoted) { Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp)); Spacer(modifier = Modifier.padding(start = 6.dp)) }
+            Text(option.text, modifier = Modifier.weight(1f))
+            Text("${votes.size} votes", fontSize = 12.sp)
         }
     }
 }

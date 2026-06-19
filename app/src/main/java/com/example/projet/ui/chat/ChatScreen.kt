@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.*
 import com.example.projet.ui.components.UtbmLogo
@@ -30,12 +33,16 @@ fun ChatScreen(
     onConversationClick: (ChatItem) -> Unit,
     onCourseHubClick: () -> Unit,
     onNewChatClick: () -> Unit,
+    isProf: Boolean = false,
+    profName: String = "",
     modifier: Modifier = Modifier,
     vm: ChatViewModel = viewModel()
 ) {
     val utbmBlue = Color(0xFF0055A4)
+    val profColor = Color(0xFF34A853)
 
     val allChatItems by vm.conversations.collectAsState()
+    var showCreateHubDialog by remember { mutableStateOf(false) }
 
     val filters = listOf("Tout", "Non lus", "Groupes", "Cours")
     var selectedFilter by remember { mutableStateOf("Tout") }
@@ -52,13 +59,27 @@ fun ChatScreen(
     Scaffold(
         modifier = modifier.fillMaxSize(),
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNewChatClick,
-                containerColor = utbmBlue,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(16.dp)
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(Icons.Default.Edit, contentDescription = "Nouveau Message")
+                if (isProf) {
+                    SmallFloatingActionButton(
+                        onClick = { showCreateHubDialog = true },
+                        containerColor = profColor,
+                        contentColor = Color.White
+                    ) {
+                        Icon(Icons.Default.School, contentDescription = "Créer un hub")
+                    }
+                }
+                FloatingActionButton(
+                    onClick = onNewChatClick,
+                    containerColor = utbmBlue,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Nouveau Message")
+                }
             }
         }
     ) { padding ->
@@ -66,7 +87,7 @@ fun ChatScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             // Header
             ChatHeader()
@@ -95,23 +116,64 @@ fun ChatScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                // Hub de cours
-                item {
-                    CourseHubCard(onClick = onCourseHubClick)
-                }
-
-                // Chat List
                 items(filteredItems) { item ->
                     val lastMsg by vm.getLastMessage(item.id).collectAsState(initial = item.lastMessage)
-                    ChatListItem(
-                        item = item,
-                        lastMessage = lastMsg ?: item.lastMessage,
-                        onClick = { onConversationClick(item) }
-                    )
+                    if (item.isCourse) {
+                        CourseHubCard(
+                            item = item,
+                            lastMessage = lastMsg ?: item.lastMessage,
+                            onClick = { onConversationClick(item) }
+                        )
+                    } else {
+                        ChatListItem(
+                            item = item,
+                            lastMessage = lastMsg ?: item.lastMessage,
+                            onClick = { onConversationClick(item) }
+                        )
+                    }
                 }
             }
         }
     }
+
+    if (showCreateHubDialog) {
+        CreateHubDialog(
+            onDismiss = { showCreateHubDialog = false },
+            onCreate = { hubName ->
+                vm.createCourseHub(hubName, profName)
+                showCreateHubDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun CreateHubDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+    var hubName by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.School, contentDescription = null, tint = Color(0xFF34A853)) },
+        title = { Text("Créer un hub de cours") },
+        text = {
+            OutlinedTextField(
+                value = hubName,
+                onValueChange = { hubName = it.uppercase() },
+                label = { Text("Code ou nom de l'UE") },
+                placeholder = { Text("ex: SY43, MT22...") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (hubName.isNotBlank()) onCreate(hubName) },
+                enabled = hubName.isNotBlank()
+            ) { Text("Créer", color = Color(0xFF34A853)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annuler") }
+        }
+    )
 }
 
 @Composable
@@ -148,8 +210,8 @@ fun SearchBar() {
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
         shape = RoundedCornerShape(28.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            unfocusedContainerColor = Color(0xFFF1F3F4),
-            focusedContainerColor = Color(0xFFF1F3F4),
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             unfocusedBorderColor = Color.Transparent,
             focusedBorderColor = Color.Transparent
         ),
@@ -182,75 +244,54 @@ fun FilterChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CourseHubCard(onClick: () -> Unit) {
+fun CourseHubCard(item: com.example.projet.data.ChatItem, lastMessage: String, onClick: () -> Unit) {
     val utbmBlue = Color(0xFF0055A4)
     Card(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = utbmBlue)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.Info,
+                    imageVector = Icons.Default.School,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    tint = Color.White.copy(alpha = 0.8f),
+                    modifier = Modifier.size(16.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "HUB DE COURS",
                     color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    text = item.time,
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 11.sp
+                )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "SY43",
-                        color = Color.White,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Professeur : 14 nouveaux documents partagés",
-                        color = Color.White.copy(alpha = 0.9f),
-                        fontSize = 14.sp
-                    )
-                }
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    repeat(2) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Color.LightGray)
-                                .offset(x = (it * (-8)).dp)
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF8AB4F8))
-                            .offset(x = (-16).dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("+12", color = utbmBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+            Text(
+                text = item.name,
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = lastMessage,
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -289,7 +330,7 @@ fun ChatListItem(item: ChatItem, lastMessage: String, onClick: () -> Unit) {
                         modifier = Modifier
                             .size(14.dp)
                             .clip(CircleShape)
-                            .background(Color.White)
+                            .background(MaterialTheme.colorScheme.background)
                             .align(Alignment.BottomEnd)
                     ) {
                         Box(
@@ -337,7 +378,7 @@ fun ChatListItem(item: ChatItem, lastMessage: String, onClick: () -> Unit) {
                     } else {
                         Text(
                             text = lastMessage,
-                            color = if (item.unreadCount > 0) Color.Black else Color.Gray,
+                            color = if (item.unreadCount > 0) MaterialTheme.colorScheme.onSurface else Color.Gray,
                             fontSize = 14.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,

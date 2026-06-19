@@ -1,5 +1,10 @@
 package com.example.projet.ui.restaurant
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.LocationManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -8,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,11 +21,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.restaurant.AvailableRestaurants
 import com.example.projet.data.restaurant.MenuDay
@@ -30,7 +38,6 @@ import com.example.projet.ui.theme.BadgeGlutenText
 import com.example.projet.ui.theme.BadgeVeganBg
 import com.example.projet.ui.theme.BadgeVeganText
 import com.example.projet.ui.theme.UtbmBlue
-import com.example.projet.ui.theme.UtbmDarkBlue
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -39,6 +46,28 @@ import java.util.*
 fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
     val selectedResto by vm.selectedRestaurant.collectAsState()
     val menuState by vm.menuState.collectAsState()
+    val gpsDetected by vm.gpsDetected.collectAsState()
+    val context = LocalContext.current
+
+    fun detectLocation() {
+        val locationManager = context.getSystemService(LocationManager::class.java) ?: return
+        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+        val location = providers.firstNotNullOfOrNull { provider ->
+            try { locationManager.getLastKnownLocation(provider) } catch (e: SecurityException) { null }
+        }
+        location?.let { vm.detectNearestRestaurant(it.latitude, it.longitude) }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) detectLocation() }
+
+    LaunchedEffect(Unit) {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) detectLocation()
+    }
 
     Scaffold(
         topBar = {
@@ -52,27 +81,40 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
                                 "Restaurant",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
-                                color = UtbmDarkBlue
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 selectedResto.city.uppercase() + " CAMPUS",
                                 fontSize = 11.sp,
-                                color = Color.Gray,
+                                color = if (gpsDetected) Color(0xFF2ECC71) else Color.Gray,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
                 },
                 actions = {
+                    IconButton(onClick = {
+                        val hasPermission = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.ACCESS_COARSE_LOCATION
+                        ) == PackageManager.PERMISSION_GRANTED
+                        if (hasPermission) detectLocation()
+                        else permissionLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    }) {
+                        Icon(
+                            Icons.Default.MyLocation,
+                            contentDescription = "Détecter campus",
+                            tint = if (gpsDetected) Color(0xFF2ECC71) else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                     IconButton(onClick = { vm.fetchMenu() }) {
                         Icon(
                             Icons.Default.Refresh,
                             contentDescription = "Actualiser",
-                            tint = UtbmDarkBlue
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
     ) { innerPadding ->
@@ -80,8 +122,23 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .background(Color(0xFFF8FAFC))
+                .background(MaterialTheme.colorScheme.background)
         ) {
+            if (gpsDetected) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFE8F8EF))
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(Icons.Default.MyLocation, contentDescription = null, tint = Color(0xFF2ECC71), modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Campus détecté automatiquement", fontSize = 12.sp, color = Color(0xFF27AE60), fontWeight = FontWeight.Medium)
+                }
+            }
+
             RestaurantSelector(
                 selected = selectedResto,
                 onSelected = { vm.selectRestaurant(it) }
@@ -203,7 +260,7 @@ fun MenuContent(menuDays: List<MenuDay>, restaurant: RestaurantInfo) {
                         restaurant.name,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -280,7 +337,7 @@ fun SectionTitle(title: String) {
         text = title,
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
-        color = UtbmDarkBlue,
+        color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.padding(vertical = 16.dp)
     )
 }
@@ -290,8 +347,8 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFF1F5F9))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -319,7 +376,7 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
                         text = title,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f),
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
