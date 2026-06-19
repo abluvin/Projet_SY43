@@ -4,13 +4,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.InputChip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
@@ -53,11 +58,16 @@ fun AgendaScreen(
     onPasteClick: () -> Unit = {},
     isProf: Boolean = false,
     isAdmin: Boolean = false,
+    userId: Int = 0,
     vm: AgendaViewModel = viewModel()
 ) {
+    LaunchedEffect(userId) { vm.setUserId(userId) }
+
     val weekStart by vm.weekStart.collectAsState()
     val selected by vm.selectedDate.collectAsState()
     val events by vm.events.collectAsState()
+    val datesWithEvents by vm.datesWithEvents.collectAsState()
+    val allUECodes by vm.allUECodes.collectAsState()
     val isPrivileged = isProf || isAdmin
     var showCreateDialog by remember { mutableStateOf(false) }
 
@@ -232,7 +242,7 @@ fun AgendaScreen(
                     val date = weekStart.plusDays(i.toLong())
                     val isSelected = date == selected
                     val isToday = date == today
-                    val hasEvents = SampleData.getEventsForDate(date).isNotEmpty()
+                    val hasEvents = date in datesWithEvents
 
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -316,6 +326,7 @@ fun AgendaScreen(
     if (showCreateDialog) {
         CreateEventDialog(
             initialDate = selected,
+            availableUECodes = allUECodes,
             onDismiss = { showCreateDialog = false },
             onCreate = { event ->
                 vm.addEvent(event)
@@ -341,9 +352,12 @@ private fun EmptyDay() {
     }
 }
 
+private val AGENDA_BRANCHES = listOf("TC", "Info", "Méca", "Industrie", "Méca Ergo", "Énergie")
+
 @Composable
 private fun CreateEventDialog(
     initialDate: LocalDate,
+    availableUECodes: List<String> = emptyList(),
     onDismiss: () -> Unit,
     onCreate: (Event) -> Unit
 ) {
@@ -356,12 +370,18 @@ private fun CreateEventDialog(
     var startText by remember { mutableStateOf("08:00") }
     var endText by remember { mutableStateOf("10:00") }
     var selectedType by remember { mutableStateOf(EventType.COURS) }
+    var isGlobal by remember { mutableStateOf(true) }
+    var targetUECodes by remember { mutableStateOf(listOf<String>()) }
+    var targetBranches by remember { mutableStateOf(listOf<String>()) }
+    var ueMenuExpanded by remember { mutableStateOf(false) }
+    var branchMenuExpanded by remember { mutableStateOf(false) }
 
     val dateValid = runCatching { LocalDate.parse(dateText) }.isSuccess
     val startValid = runCatching { LocalTime.parse(startText, timeFmt) }.isSuccess
     val endValid = runCatching { LocalTime.parse(endText, timeFmt) }.isSuccess
+    val targetsValid = isGlobal || targetUECodes.isNotEmpty() || targetBranches.isNotEmpty()
     val isValid = title.isNotBlank() && code.isNotBlank() && location.isNotBlank() &&
-        instructor.isNotBlank() && dateValid && startValid && endValid
+        instructor.isNotBlank() && dateValid && startValid && endValid && targetsValid
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -421,6 +441,113 @@ private fun CreateEventDialog(
                     )
                 }
 
+                HorizontalDivider()
+
+                // Visibilité
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Visible par tous", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Switch(
+                        checked = isGlobal,
+                        onCheckedChange = {
+                            isGlobal = it
+                            if (it) { targetUECodes = emptyList(); targetBranches = emptyList() }
+                        }
+                    )
+                }
+
+                if (!isGlobal) {
+                    // Ciblage par UE
+                    Text("UEs concernées", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (targetUECodes.isNotEmpty()) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(targetUECodes) { ueCode ->
+                                InputChip(
+                                    selected = false,
+                                    onClick = { targetUECodes = targetUECodes - ueCode },
+                                    label = { Text(ueCode) },
+                                    trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(14.dp)) }
+                                )
+                            }
+                        }
+                    }
+                    Box {
+                        OutlinedButton(
+                            onClick = { ueMenuExpanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Ajouter une UE")
+                        }
+                        DropdownMenu(
+                            expanded = ueMenuExpanded,
+                            onDismissRequest = { ueMenuExpanded = false },
+                            modifier = Modifier.heightIn(max = 200.dp)
+                        ) {
+                            val available = availableUECodes.filter { it !in targetUECodes }
+                            if (available.isEmpty()) {
+                                DropdownMenuItem(text = { Text("Toutes les UEs déjà ajoutées", color = MaterialTheme.colorScheme.onSurfaceVariant) }, onClick = { ueMenuExpanded = false })
+                            } else {
+                                available.forEach { ueCode ->
+                                    DropdownMenuItem(
+                                        text = { Text(ueCode) },
+                                        onClick = { targetUECodes = targetUECodes + ueCode; ueMenuExpanded = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Ciblage par branche
+                    Text("Branches concernées", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (targetBranches.isNotEmpty()) {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(targetBranches) { branch ->
+                                InputChip(
+                                    selected = false,
+                                    onClick = { targetBranches = targetBranches - branch },
+                                    label = { Text(branch) },
+                                    trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(14.dp)) }
+                                )
+                            }
+                        }
+                    }
+                    Box {
+                        OutlinedButton(
+                            onClick = { branchMenuExpanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Ajouter une branche")
+                        }
+                        DropdownMenu(
+                            expanded = branchMenuExpanded,
+                            onDismissRequest = { branchMenuExpanded = false }
+                        ) {
+                            AGENDA_BRANCHES.filter { it !in targetBranches }.forEach { branch ->
+                                DropdownMenuItem(
+                                    text = { Text(branch) },
+                                    onClick = { targetBranches = targetBranches + branch; branchMenuExpanded = false }
+                                )
+                            }
+                        }
+                    }
+
+                    if (!targetsValid) {
+                        Text(
+                            "Ajoutez au moins une UE ou une branche",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+
+                HorizontalDivider()
                 Text("Type", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     EventType.values().forEach { type ->
@@ -455,7 +582,10 @@ private fun CreateEventDialog(
                                     date = LocalDate.parse(dateText),
                                     startTime = LocalTime.parse(startText, timeFmt),
                                     endTime = LocalTime.parse(endText, timeFmt),
-                                    type = selectedType
+                                    type = selectedType,
+                                    isGlobal = isGlobal,
+                                    targetUECodes = targetUECodes,
+                                    targetBranches = targetBranches
                                 )
                             )
                         },
