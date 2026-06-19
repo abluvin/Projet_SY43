@@ -1,5 +1,6 @@
 package com.example.projet.ui.profile
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,12 +12,19 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Article
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
@@ -29,16 +37,22 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,8 +65,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.projet.data.UE
 import com.example.projet.data.UserRole
+import com.example.projet.data.UserUEWithDetails
 
 private val UtbmBlue = Color(0xFF0055A4)
 private val ProfColor = Color(0xFF34A853)
@@ -70,8 +87,12 @@ fun ProfileScreen(
     val user by vm.user.collectAsState()
     val postCount by vm.postCount.collectAsState()
     val passwordResult by vm.passwordResult.collectAsState()
+    val allUEs by vm.allUEs.collectAsState()
+    val userUEs by vm.userUEs.collectAsState()
+
     var showEditDialog by remember { mutableStateOf(false) }
     var showPasswordDialog by remember { mutableStateOf(false) }
+    var showAddUEDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -100,6 +121,7 @@ fun ProfileScreen(
                 modifier = Modifier
                     .padding(innerPadding)
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -167,6 +189,23 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
+                BranchCard(
+                    selectedBranch = currentUser.branch,
+                    onBranchSelected = { vm.updateBranch(it) }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                UEsCard(
+                    userUEs = userUEs,
+                    isProf = isProf,
+                    onAddClick = { showAddUEDialog = true },
+                    onRemove = { ueId -> vm.removeUE(ueId) },
+                    onToggleEnseigne = { ueId, enseigne -> vm.updateEnseigne(ueId, enseigne) }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -195,6 +234,8 @@ fun ProfileScreen(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
 
             if (showEditDialog) {
@@ -214,6 +255,304 @@ fun ProfileScreen(
                     onConfirm = { current, new -> vm.changePassword(current, new) },
                     onDismiss = { showPasswordDialog = false; vm.resetPasswordResult() }
                 )
+            }
+
+            if (showAddUEDialog) {
+                val available = allUEs.filter { ue -> userUEs.none { it.ue.id == ue.id } }
+                AddUEDialog(
+                    availableUEs = available,
+                    userBranch = currentUser.branch,
+                    isProf = isProf,
+                    onDismiss = { showAddUEDialog = false },
+                    onConfirm = { ueId, enseigne ->
+                        vm.addUE(ueId, enseigne)
+                        showAddUEDialog = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UEsCard(
+    userUEs: List<UserUEWithDetails>,
+    isProf: Boolean,
+    onAddClick: () -> Unit,
+    onRemove: (Int) -> Unit,
+    onToggleEnseigne: (Int, Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Mes UEs", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "${userUEs.size}/10",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (userUEs.size >= 10) Color(0xFFD32F2F) else UtbmBlue
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+            if (userUEs.isEmpty()) {
+                Text(
+                    "Aucune UE sélectionnée",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            } else {
+                userUEs.forEach { item ->
+                    UERow(
+                        item = item,
+                        isProf = isProf,
+                        onRemove = { onRemove(item.ue.id) },
+                        onToggleEnseigne = { enseigne -> onToggleEnseigne(item.ue.id, enseigne) }
+                    )
+                    if (item != userUEs.last()) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = onAddClick,
+                enabled = userUEs.size < 10,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(if (userUEs.size >= 10) "Limite atteinte (10/10)" else "Ajouter une UE")
+            }
+        }
+    }
+}
+
+@Composable
+private fun UERow(
+    item: UserUEWithDetails,
+    isProf: Boolean,
+    onRemove: () -> Unit,
+    onToggleEnseigne: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            color = UtbmBlue.copy(alpha = 0.12f),
+            shape = RoundedCornerShape(6.dp)
+        ) {
+            Text(
+                item.ue.code,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = UtbmBlue
+            )
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            item.ue.name,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+        if (isProf) {
+            Switch(
+                checked = item.userUE.enseigne,
+                onCheckedChange = onToggleEnseigne,
+                colors = SwitchDefaults.colors(checkedThumbColor = ProfColor, checkedTrackColor = ProfColor.copy(alpha = 0.4f))
+            )
+        }
+        IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+            Icon(Icons.Filled.Close, contentDescription = "Supprimer", tint = Color(0xFFD32F2F), modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+private val BRANCHES = listOf("TC", "Info", "Méca", "Industrie", "Méca Ergo", "Énergie")
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BranchCard(selectedBranch: String, onBranchSelected: (String) -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Ma branche", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(BRANCHES) { branch ->
+                    FilterChip(
+                        selected = selectedBranch == branch,
+                        onClick = { onBranchSelected(if (selectedBranch == branch) "" else branch) },
+                        label = { Text(branch) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = UtbmBlue.copy(alpha = 0.15f),
+                            selectedLabelColor = UtbmBlue
+                        )
+                    )
+                }
+            }
+            if (selectedBranch.isBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Sélectionnez votre branche pour filtrer les UEs disponibles",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddUEDialog(
+    availableUEs: List<UE>,
+    userBranch: String,
+    isProf: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (ueId: Int, enseigne: Boolean) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedUE by remember { mutableStateOf<UE?>(null) }
+    var enseigne by remember { mutableStateOf(false) }
+
+    val filtered = availableUEs.filter { ue ->
+        val matchesBranch = userBranch.isBlank() || ue.branch == userBranch || ue.branch == "Transversal"
+        val matchesSearch = searchQuery.isBlank() ||
+            ue.code.contains(searchQuery, ignoreCase = true) ||
+            ue.name.contains(searchQuery, ignoreCase = true)
+        matchesBranch && matchesSearch
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(shape = RoundedCornerShape(16.dp)) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    "Ajouter une UE",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                if (userBranch.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Branche $userBranch + Transversales",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = UtbmBlue
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it; selectedUE = null },
+                    label = { Text("Rechercher") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (filtered.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "Aucune UE disponible",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                } else {
+                    LazyColumn(modifier = Modifier.fillMaxWidth().height(260.dp)) {
+                        items(filtered) { ue ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { selectedUE = ue }
+                                    .padding(vertical = 6.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = selectedUE?.id == ue.id,
+                                    onClick = { selectedUE = ue }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(ue.code, fontWeight = FontWeight.Bold, color = UtbmBlue, style = MaterialTheme.typography.bodyMedium)
+                                    Text(ue.name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                if (ue.branch != "Transversal") {
+                                    Surface(
+                                        color = UtbmBlue.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            ue.branch,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = UtbmBlue
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (isProf) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("J'enseigne cette UE", style = MaterialTheme.typography.bodyMedium)
+                        Switch(
+                            checked = enseigne,
+                            onCheckedChange = { enseigne = it },
+                            colors = SwitchDefaults.colors(checkedThumbColor = ProfColor, checkedTrackColor = ProfColor.copy(alpha = 0.4f))
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+                ) {
+                    TextButton(onClick = onDismiss) { Text("Annuler") }
+                    Button(
+                        onClick = { selectedUE?.let { onConfirm(it.id, enseigne) } },
+                        enabled = selectedUE != null,
+                        colors = ButtonDefaults.buttonColors(containerColor = UtbmBlue)
+                    ) {
+                        Text("Ajouter")
+                    }
+                }
             }
         }
     }

@@ -12,5 +12,6 @@ data class User(
     var email: String = "",
     var password: String = "",
     var isAdmin: Boolean = false,
-    var role: String = UserRole.STUDENT.name
+    var role: String = UserRole.STUDENT.name,
+    var branch: String = ""
 )
