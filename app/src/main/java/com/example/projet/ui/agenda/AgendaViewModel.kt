@@ -31,6 +31,7 @@ class AgendaViewModel(application: Application) : AndroidViewModel(application) 
     private val repo: EventRepository
     private val ueRepo: UERepository
     private val userRepo: UserRepository
+    private val firestoreRepo = com.example.projet.data.firebase.EventFireStoreRepository(com.example.projet.data.firebase.FireStoreRepository())
 
     init {
         val db = (application as ProjetApplication).database
@@ -105,9 +106,27 @@ class AgendaViewModel(application: Application) : AndroidViewModel(application) 
         _selectedDate.value = _weekStart.value
     }
 
-    fun addEvents(newEvents: List<Event>) { viewModelScope.launch { repo.insertAll(newEvents) } }
+    fun addEvents(newEvents: List<Event>) {
+        viewModelScope.launch {
+            repo.insertAll(newEvents)
+            val currentId = _userId.value
+            if (currentId != 0) {
+                newEvents.forEach {
+                    try { firestoreRepo.saveEvent(currentId, it) } catch (e: Exception) { e.printStackTrace() }
+                }
+            }
+        }
+    }
 
-    fun addEvent(event: Event) { viewModelScope.launch { repo.insert(event) } }
+    fun addEvent(event: Event) {
+        viewModelScope.launch {
+            repo.insert(event)
+            val currentId = _userId.value
+            if (currentId != 0) {
+                try { firestoreRepo.saveEvent(currentId, event) } catch (e: Exception) { e.printStackTrace() }
+            }
+        }
+    }
 
     private fun isVisibleForUser(event: Event, userUECodes: List<String>, userBranch: String): Boolean {
         if (event.isGlobal) return true

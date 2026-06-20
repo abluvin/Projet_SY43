@@ -8,16 +8,28 @@ import com.example.projet.data.*
 import com.example.projet.data.firebase.FireStoreRepository
 import com.example.projet.data.firebase.PostFireStoreRepository
 import com.example.projet.data.repository.PostRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import com.example.projet.data.repository.UERepository
+import com.example.projet.data.repository.UserRepository
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+
+sealed class PostFilter {
+    object General : PostFilter()
+    object ByBranch : PostFilter()
+    data class ByUE(val code: String) : PostFilter()
+}
 
 class PostViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repo: PostRepository
+    private val userRepo: UserRepository
+    private val ueRepo: UERepository
     private val firestoreRepo: PostFireStoreRepository
+
+    private val _filter = MutableStateFlow<PostFilter>(PostFilter.General)
+    val filter = _filter.asStateFlow()
+
+    private val _currentUserId = MutableStateFlow<Int>(0)
 
     init {
         val db = (application as ProjetApplication).database
@@ -25,22 +37,51 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
             db.postDao(), db.commentDao(),
             db.voiceMessageDao(), db.pollDao(), db.pollOptionDao(), db.pollVoteDao()
         )
+        userRepo = UserRepository(db.userDao())
+        ueRepo = UERepository(db.ueDao(), db.userUEDao())
         firestoreRepo = PostFireStoreRepository(FireStoreRepository())
     }
 
-    val posts: StateFlow<List<Post>> = repo.getAll()
+    fun setUserId(userId: Int) {
+        _currentUserId.value = userId
+    }
+
+    val userBranch: StateFlow<String> = _currentUserId
+        .map { id -> if (id == 0) "" else userRepo.getById(id)?.branch ?: "" }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val userUECodes: StateFlow<List<String>> = _currentUserId
+        .flatMapLatest { id ->
+            if (id == 0) flowOf(emptyList())
+            else ueRepo.getUserUEs(id).map { list -> list.map { it.ue.code } }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val posts: StateFlow<List<Post>> = combine(repo.getAll(), _filter, userBranch, userUECodes) { allPosts, currentFilter, branch, ues ->
+        when (currentFilter) {
+            is PostFilter.General -> allPosts.filter { it.ue == null }
+            is PostFilter.ByBranch -> allPosts.filter { it.ue == null } // Adjust if branch logic is different
+            is PostFilter.ByUE -> allPosts.filter { it.ue == currentFilter.code }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allUniqueUEsFromPosts: StateFlow<List<String>> = repo.getAll()
+        .map { posts -> posts.mapNotNull { it.ue }.distinct().sorted() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun setFilter(newFilter: PostFilter) {
+        _filter.value = newFilter
+    }
 
     fun createPost(text: String, imageUrl: String?, userId: Int = 1, ue: String? = null) {
         viewModelScope.launch {
             val post = Post(text = text, idUser = userId, imageUrl = imageUrl, ue = ue)
             val id = repo.insert(post)
             post.id = id.toInt()
-            // Optionnel : sauvegarde aussi sur Firestore
             try {
                 firestoreRepo.createPost(post)
             } catch (e: Exception) {
-                // Gérer l'erreur Firestore sans impacter Room
+                e.printStackTrace()
             }
         }
     }

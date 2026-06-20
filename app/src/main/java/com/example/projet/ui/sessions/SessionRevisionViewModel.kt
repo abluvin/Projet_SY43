@@ -22,6 +22,7 @@ class CollaborationViewModel(application: Application) : AndroidViewModel(applic
     private val repo = CollaborationRepository(
         (application as ProjetApplication).database.collaborationDao()
     )
+    private val firestoreRepo = com.example.projet.data.firebase.CollaborationFireStoreRepository(com.example.projet.data.firebase.FireStoreRepository())
 
     val collaborations: StateFlow<List<Collaboration>> = repo.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -42,7 +43,10 @@ class CollaborationViewModel(application: Application) : AndroidViewModel(applic
     }
 
     fun createCollaboration(collaboration: Collaboration) {
-        viewModelScope.launch { repo.insert(collaboration) }
+        viewModelScope.launch {
+            repo.insert(collaboration)
+            try { firestoreRepo.saveCollaboration(collaboration) } catch (e: Exception) { e.printStackTrace() }
+        }
     }
 
     fun joinCollaboration(collaborationId: String, userId: String, userName: String) {
@@ -51,13 +55,13 @@ class CollaborationViewModel(application: Application) : AndroidViewModel(applic
             if (current.participantIds.contains(userId)) return@launch
             if (current.participantIds.size >= current.maxParticipants) return@launch
             val newIds = current.participantIds + userId
-            repo.update(
-                current.copy(
-                    participantIds = newIds,
-                    participantNames = current.participantNames + userName,
-                    status = if (newIds.size >= current.maxParticipants) "FULL" else "OPEN"
-                )
+            val updated = current.copy(
+                participantIds = newIds,
+                participantNames = current.participantNames + userName,
+                status = if (newIds.size >= current.maxParticipants) "FULL" else "OPEN"
             )
+            repo.update(updated)
+            try { firestoreRepo.saveCollaboration(updated) } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
@@ -66,13 +70,13 @@ class CollaborationViewModel(application: Application) : AndroidViewModel(applic
             val current = collaborations.value.find { it.id == collaborationId } ?: return@launch
             if (!current.participantIds.contains(userId)) return@launch
             val idx = current.participantIds.indexOf(userId)
-            repo.update(
-                current.copy(
-                    participantIds = current.participantIds.toMutableList().also { it.removeAt(idx) },
-                    participantNames = current.participantNames.toMutableList().also { it.removeAt(idx) },
-                    status = "OPEN"
-                )
+            val updated = current.copy(
+                participantIds = current.participantIds.toMutableList().also { it.removeAt(idx) },
+                participantNames = current.participantNames.toMutableList().also { it.removeAt(idx) },
+                status = "OPEN"
             )
+            repo.update(updated)
+            try { firestoreRepo.saveCollaboration(updated) } catch (e: Exception) { e.printStackTrace() }
         }
     }
 

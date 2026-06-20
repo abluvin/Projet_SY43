@@ -43,6 +43,7 @@ import com.example.projet.ui.camera.CameraScreen
 import com.example.projet.ui.Register.Connexion
 import com.example.projet.ui.Register.Register
 import com.example.projet.ui.chat.ChatScreen
+import com.example.projet.ui.chat.ChatViewModel
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
@@ -443,6 +444,8 @@ fun MainApp(
                     )
                 }
                 composable(Routes.CHAT) {
+                    val chatVM: ChatViewModel = viewModel()
+                    LaunchedEffect(userId) { chatVM.setCurrentUserId(userId) }
                     ChatScreen(
                         onConversationClick = { chatItem ->
                             if (chatItem.isCourse) {
@@ -454,7 +457,8 @@ fun MainApp(
                         onCourseHubClick = { navController.navigate(Routes.courseHub(6)) },
                         onNewChatClick = { showNewChatDialog = true },
                         isProf = isProf,
-                        profName = username
+                        profName = username,
+                        vm = chatVM
                     )
                 }
                 composable(Routes.GROUPS) {
@@ -507,9 +511,12 @@ fun MainApp(
                     arguments = listOf(navArgument("chatItemId") { type = NavType.IntType })
                 ) { backStackEntry ->
                     val chatItemId = backStackEntry.arguments?.getInt("chatItemId") ?: return@composable
+                    val chatVM: ChatViewModel = viewModel()
+                    LaunchedEffect(userId) { chatVM.setCurrentUserId(userId) }
                     ConversationScreen(
                         chatItemId = chatItemId,
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        vm = chatVM
                     )
                 }
                 composable(
@@ -517,10 +524,13 @@ fun MainApp(
                     arguments = listOf(navArgument("chatItemId") { type = NavType.IntType })
                 ) { backStackEntry ->
                     val chatItemId = backStackEntry.arguments?.getInt("chatItemId") ?: return@composable
+                    val chatVM: ChatViewModel = viewModel()
+                    LaunchedEffect(userId) { chatVM.setCurrentUserId(userId) }
                     CourseScreen(
                         chatItemId = chatItemId,
                         isProf = isProf,
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        vm = chatVM
                     )
                 }
             }

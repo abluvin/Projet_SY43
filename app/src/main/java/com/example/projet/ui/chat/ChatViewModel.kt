@@ -23,6 +23,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repo: ChatRepository
     private val firestoreRepo = ChatFireStoreRepository(FireStoreRepository())
+    private var currentUserId: Int = 0
     
     init {
         val db = (application as ProjetApplication).database
@@ -30,6 +31,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             if (repo.getAllConversations().first().isEmpty()) seedConversations()
         }
+    }
+
+    fun setCurrentUserId(id: Int) {
+        currentUserId = id
     }
 
     val conversations: StateFlow<List<ChatItem>> = repo.getAllConversations()
@@ -52,7 +57,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             
             // 2. Firestore
             try {
-                firestoreRepo.sendMessage(updatedMsg)
+                if (currentUserId != 0) {
+                    firestoreRepo.sendMessage(currentUserId, updatedMsg)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -70,7 +77,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             
             // 2. Firestore
             try {
-                firestoreRepo.sendMessage(updatedMsg)
+                if (currentUserId != 0) {
+                    firestoreRepo.sendMessage(currentUserId, updatedMsg)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -94,7 +103,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             
             // 2. Firestore
             try {
-                firestoreRepo.createConversation(updatedChatItem)
+                if (currentUserId != 0) {
+                    firestoreRepo.createConversation(currentUserId, updatedChatItem)
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
