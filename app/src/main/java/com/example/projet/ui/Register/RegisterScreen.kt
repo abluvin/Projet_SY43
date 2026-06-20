@@ -2,6 +2,7 @@ package com.example.projet.ui.Register
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Gray
 import androidx.compose.ui.text.SpanStyle
@@ -57,7 +59,6 @@ fun Register(
     onNavigateToLogin: () -> Unit = {}
 ) {
     val utbmBlue = Color(0xFF0055A4)
-    val backgroundColor = Color(0xFFF8F9FA)
 
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -80,15 +81,20 @@ fun Register(
         }
     }
 
-    Column(
-        modifier = Modifier
+    LazyColumn(
+        modifier = modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        item {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Spacer(modifier = Modifier.height(40.dp))
 
         UtbmLogo(iconSize = 56.dp)
 
@@ -117,7 +123,7 @@ fun Register(
                     onValueChange = { username = it },
                     label = { Text("Nom") },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = utbmBlue) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("register_name"),
                     shape = RoundedCornerShape(12.dp)
                 )
 
@@ -126,7 +132,7 @@ fun Register(
                     onValueChange = { email = it; errorMessage = "" },
                     label = { Text("Email (@utbm.fr)") },
                     leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = utbmBlue) },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("register_email"),
                     shape = RoundedCornerShape(12.dp),
                     isError = emailError,
                     supportingText = if (emailError) {
@@ -140,7 +146,7 @@ fun Register(
                     label = { Text("Mot de passe") },
                     leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = utbmBlue) },
                     visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("register_password"),
                     shape = RoundedCornerShape(12.dp)
                 )
 
@@ -150,7 +156,7 @@ fun Register(
                     label = { Text("Code d'accès (optionnel)") },
                     leadingIcon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = utbmBlue) },
                     visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("register_admin_code"),
                     shape = RoundedCornerShape(12.dp)
                 )
 
@@ -200,7 +206,8 @@ fun Register(
             onClick = { vm.register(username, email, password, adminCode) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp),
+                .height(56.dp)
+                .testTag("register_submit"),
             enabled = username.isNotBlank() && email.isNotBlank() && password.isNotBlank() && !emailError,
             colors = ButtonDefaults.buttonColors(containerColor = utbmBlue)
         ) {
@@ -223,7 +230,11 @@ fun Register(
             },
             fontSize = 14.sp,
             color = Gray,
-            modifier = Modifier.clickable { onNavigateToLogin() }
+            modifier = Modifier
+                .testTag("go_to_login")
+                .clickable { onNavigateToLogin() }
         )
+            }
+        }
     }
 }

@@ -62,6 +62,9 @@ import com.example.projet.ui.sessions.CollaborationViewModel
 import com.example.projet.ui.profile.ProfileScreen
 import com.example.projet.ui.settings.SettingsScreen
 import com.example.projet.ui.theme.ProjetTheme
+import com.example.projet.ui.components.UtbmLogo
+import androidx.compose.foundation.background
+import kotlinx.coroutines.delay
 
 object Routes {
     const val HOME = "home"
@@ -95,23 +98,28 @@ class MainActivity : ComponentActivity() {
             val systemDarkTheme = isSystemInDarkTheme()
             var isDarkTheme by remember { mutableStateOf(systemDarkTheme) }
             ProjetTheme(darkTheme = isDarkTheme) {
-                AppRoot(
-                    isDarkTheme = isDarkTheme,
-                    onToggleDarkTheme = { isDarkTheme = it }
-                )
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    AppRoot(
+                        isDarkTheme = isDarkTheme,
+                        onToggleDarkTheme = { isDarkTheme = it }
+                    )
+                }
             }
         }
     }
 }
 
-private enum class AppState { LOGIN, REGISTER, WELCOME, MAIN }
+private enum class AppState { SPLASH, LOGIN, REGISTER, WELCOME, MAIN }
 
 @Composable
 fun AppRoot(
     isDarkTheme: Boolean = false,
     onToggleDarkTheme: (Boolean) -> Unit = {}
 ) {
-    var appState by remember { mutableStateOf(AppState.LOGIN) }
+    var appState by remember { mutableStateOf(AppState.SPLASH) }
     var username by remember { mutableStateOf("") }
     var userId by remember { mutableStateOf(0) }
     var isAdmin by remember { mutableStateOf(false) }
@@ -119,6 +127,7 @@ fun AppRoot(
 
     Crossfade(targetState = appState, label = "auth_state") { state ->
         when (state) {
+            AppState.SPLASH -> SplashScreen(onFinish = { appState = AppState.LOGIN })
             AppState.LOGIN -> Connexion(
                 onLoggedIn = { name, id, admin, role ->
                     username = name; userId = id; isAdmin = admin; userRole = role
@@ -150,6 +159,25 @@ fun AppRoot(
                     appState = AppState.LOGIN
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun SplashScreen(onFinish: () -> Unit) {
+    LaunchedEffect(Unit) {
+        delay(2000)
+        onFinish()
+    }
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            UtbmLogo(iconSize = 100.dp)
         }
     }
 }

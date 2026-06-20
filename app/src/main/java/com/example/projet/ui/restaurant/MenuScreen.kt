@@ -74,7 +74,9 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
             TopAppBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        UtbmLogo(iconSize = 32.dp, showText = false)
+
+                        UtbmLogo(iconSize = 32.dp)
+
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
@@ -83,12 +85,7 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
                                 fontSize = 18.sp,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
-                            Text(
-                                selectedResto.city.uppercase() + " CAMPUS",
-                                fontSize = 11.sp,
-                                color = if (gpsDetected) Color(0xFF2ECC71) else Color.Gray,
-                                fontWeight = FontWeight.SemiBold
-                            )
+
                         }
                     }
                 },
@@ -121,7 +118,7 @@ fun MenuScreen(vm: RestaurantViewModel = viewModel()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding())
                 .background(MaterialTheme.colorScheme.background)
         ) {
             if (gpsDetected) {
@@ -247,7 +244,8 @@ fun MenuContent(menuDays: List<MenuDay>, restaurant: RestaurantInfo) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp)
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         item {
             Row(
@@ -324,10 +322,6 @@ fun MenuContent(menuDays: List<MenuDay>, restaurant: RestaurantInfo) {
                 }
             }
         }
-        
-        item {
-            Spacer(Modifier.height(32.dp))
-        }
     }
 }
 
@@ -351,8 +345,10 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .padding(12.dp)
+                .heightIn(min = 64.dp),
+            verticalAlignment = Alignment.Top
         ) {
             Box(
                 modifier = Modifier
@@ -366,7 +362,11 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .align(Alignment.CenterVertically)
+            ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -378,7 +378,7 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.weight(1f),
-                        maxLines = 3,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
 
@@ -388,7 +388,8 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
                         text = price,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp,
-                        color = UtbmBlue
+                        color = UtbmBlue,
+                        textAlign = TextAlign.End
                     )
                 }
 
@@ -406,9 +407,18 @@ fun MenuRowItem(title: String, price: String, badgeText: String, isVegan: Boolea
 
 @Composable
 fun CustomBadge(text: String, bgColor: Color, textColor: Color) {
-    Box(
-        modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bgColor).padding(horizontal = 8.dp, vertical = 4.dp)
+    Surface(
+        color = bgColor,
+        shape = RoundedCornerShape(6.dp)
     ) {
-        Text(text, color = textColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = text,
+            color = textColor,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
