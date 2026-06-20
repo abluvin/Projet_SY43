@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Gray
 import androidx.compose.ui.text.SpanStyle
@@ -206,10 +207,9 @@ fun Connexion(
                     },
                     fontSize = 14.sp,
                     color = Gray,
-                    modifier = Modifier.clickable { onNavigateToRegister() }
-//                    modifier = Modifier
-//                    .testTag("go_to_register")
-//                .clickable { onNavigateToRegister() }
+                    modifier = Modifier
+                        .testTag("go_to_register")
+                        .clickable { onNavigateToRegister() }
                 )
             }
         }

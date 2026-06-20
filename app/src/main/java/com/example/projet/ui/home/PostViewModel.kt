@@ -52,7 +52,7 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
             post.id = postId.toInt()
 
             repo.insertVoiceMessage(VoiceMessage(postId = postId.toInt(), userId = userId, filePath = filePath, duration = duration))
-            
+
             try {
                 firestoreRepo.createPost(post)
             } catch (e: Exception) {

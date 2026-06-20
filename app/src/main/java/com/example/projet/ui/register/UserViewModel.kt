@@ -69,12 +69,11 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
 
             // 2. Sauvegarde synchronisée dans Firestore
             try {
-                Log.d("FirestoreSync", "Tentative d'envoi vers Firestore pour l'utilisateur: ${user.name}")
+                Log.d("FirestoreSync", "Tentative d'envoi vers Firestore pour l'utilisateur: ${user.name} (ID: ${user.id})")
                 firestoreRepo.createUser(user)
                 Log.d("FirestoreSync", "Utilisateur envoyé avec succès sur Firestore")
             } catch (e: Exception) {
                 Log.e("FirestoreSync", "Erreur lors de l'envoi vers Firestore: ${e.message}", e)
-                e.printStackTrace()
             }
 
             _registerState.value = RegisterState.Success(name, user.id, isAdmin, role)
