@@ -71,7 +71,6 @@ fun CameraScreen(
     var imageCapture: ImageCapture? by remember { mutableStateOf(null) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header with close button
         Row(
             modifier = Modifier
                 .fillMaxWidth()

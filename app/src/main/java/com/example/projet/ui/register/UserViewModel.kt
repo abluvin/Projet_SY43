@@ -63,11 +63,8 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
                 role = role
             )
 
-            // 1. Sauvegarde dans Room
             val id = repo.insert(user)
             user.id = id.toInt()
-
-            // 2. Sauvegarde synchronisée dans Firestore
             try {
                 Log.d("FirestoreSync", "Tentative d'envoi vers Firestore pour l'utilisateur: ${user.name} (ID: ${user.id})")
                 firestoreRepo.createUser(user)

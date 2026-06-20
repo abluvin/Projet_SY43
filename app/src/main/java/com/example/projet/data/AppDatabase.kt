@@ -267,14 +267,11 @@ abstract class AppDatabase : RoomDatabase() {
 
         private val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Nouveaux champs sur message
                 database.execSQL("ALTER TABLE message ADD COLUMN messageType TEXT NOT NULL DEFAULT 'TEXT'")
                 database.execSQL("ALTER TABLE message ADD COLUMN audioPath TEXT")
                 database.execSQL("ALTER TABLE message ADD COLUMN audioDuration INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE message ADD COLUMN pollId INTEGER")
-                // Nouveau champ sur chat_item
                 database.execSQL("ALTER TABLE chat_item ADD COLUMN ueCode TEXT")
-                // Tables pour les sondages de chat
                 database.execSQL("""
                     CREATE TABLE IF NOT EXISTS `chat_poll` (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,

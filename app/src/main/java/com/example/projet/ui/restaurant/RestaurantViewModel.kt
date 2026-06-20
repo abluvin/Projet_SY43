@@ -65,7 +65,6 @@ class RestaurantViewModel : ViewModel() {
             val restaurantId = _selectedRestaurant.value.id
             
             try {
-                // 1. Tenter de récupérer le menu pour AUJOURD'HUI
                 val todayDate = Date()
                 val formats = listOf("dd-MM-yyyy", "yyyy-MM-dd")
                 
@@ -78,12 +77,9 @@ class RestaurantViewModel : ViewModel() {
                             _menuState.value = MenuState.Success(listOf(response.data))
                             return@launch
                         }
-                    } catch (e: Exception) {
-                        // Ignorer et tenter le format suivant
-                    }
+                    } catch (e: Exception) { }
                 }
 
-                // 2. Si aujourd'hui échoue, tenter de récupérer la LISTE COMPLÈTE
                 try {
                     val listResponse = apiService.getMenuList(restaurantId)
                     if (listResponse.success && listResponse.data.isNotEmpty()) {
@@ -91,16 +87,11 @@ class RestaurantViewModel : ViewModel() {
                         return@launch
                     }
                 } catch (e: HttpException) {
-                    // Si 404 sur la liste, c'est fréquent pour certains restos (Belfort)
-                } catch (e: Exception) {
-                    // Erreur technique diverse
-                }
+                } catch (e: Exception) { }
 
-                // 3. Fallback : Si on n'a rien trouvé, afficher un message explicatif au lieu d'un 404 brut
                 _menuState.value = MenuState.Error("Le CROUS n'a pas encore publié de menu détaillé pour ce restaurant aujourd'hui.")
-                
+
             } catch (e: Exception) {
-                // Erreur critique (réseau coupé, etc.)
                 _menuState.value = MenuState.Error("Problème de connexion : ${e.localizedMessage}")
             }
         }

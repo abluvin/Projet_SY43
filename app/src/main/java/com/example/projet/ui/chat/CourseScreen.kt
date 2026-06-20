@@ -224,7 +224,6 @@ fun CourseScreen(
                 }
             }
 
-            // Barre du bas
             Surface(
                 tonalElevation = 4.dp,
                 modifier = Modifier.fillMaxWidth(),

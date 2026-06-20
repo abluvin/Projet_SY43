@@ -51,7 +51,6 @@ class ChatRepository(
 
     suspend fun deleteAllMessages(chatItemId: Int) = messageDao.deleteByChatItem(chatItemId)
 
-    // Poll methods
     fun getPoll(pollId: Int): Flow<ChatPoll?> = chatPollDao.getById(pollId)
 
     fun getPollOptions(pollId: Int): Flow<List<ChatPollOption>> = chatPollOptionDao.getByPoll(pollId)

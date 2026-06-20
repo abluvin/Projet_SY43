@@ -177,7 +177,6 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Filter chips : Général → Branche → UEs
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -332,7 +331,6 @@ fun PostBloc(
         color = Color.Transparent
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
-            // UE badge
             if (post.ue != null) {
                 Surface(
                     color = Color(0xFF34A853).copy(alpha = 0.2f),
@@ -369,7 +367,6 @@ fun PostBloc(
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(text = post.text, color = Color.White.copy(alpha = 0.9f))
 
-                    // Lecture audio inline pour posts vocaux
                     val voicePath = post.voiceFilePath
                     if (voicePath != null) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -391,7 +388,6 @@ fun PostBloc(
                         }
                     }
 
-                    // Sondage inline
                     if (post.isPoll && polls.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(12.dp))
                         polls.forEach { poll -> PollItem(poll = poll, vm = vm, currentUserId = currentUserId) }
@@ -457,7 +453,6 @@ fun PostBloc(
                         }
                     }
 
-                    // Messages vocaux en réaction
                     if (voiceMessages.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Vocaux", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)

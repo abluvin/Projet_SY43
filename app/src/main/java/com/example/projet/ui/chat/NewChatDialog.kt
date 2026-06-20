@@ -68,7 +68,6 @@ fun NewChatDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Chips des personnes sélectionnées
                 if (selectedUsers.isNotEmpty()) {
                     androidx.compose.foundation.lazy.LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -84,7 +83,6 @@ fun NewChatDialog(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Barre de recherche
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -101,7 +99,6 @@ fun NewChatDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Liste des utilisateurs
                 if (filteredUsers.isEmpty() && searchQuery.isNotBlank()) {
                     Box(
                         modifier = Modifier

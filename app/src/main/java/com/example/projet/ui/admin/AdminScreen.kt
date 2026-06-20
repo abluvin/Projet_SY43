@@ -123,7 +123,6 @@ private fun UserCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Avatar icon reflecting role
                 Surface(
                     shape = MaterialTheme.shapes.medium,
                     color = when {
@@ -151,7 +150,6 @@ private fun UserCard(
                     }
                 }
 
-                // Name + badges
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -182,7 +180,6 @@ private fun UserCard(
                     )
                 }
 
-                // Delete button
                 if (!isSelf) {
                     IconButton(onClick = onDelete) {
                         Icon(Icons.Filled.Delete, contentDescription = "Supprimer", tint = Color(0xFFFF6B6B))
@@ -190,14 +187,12 @@ private fun UserCard(
                 }
             }
 
-            // Action buttons (only for others)
             if (!isSelf) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Toggle primary role
                     OutlinedButton(
                         onClick = {
                             onSetRole(
@@ -218,7 +213,6 @@ private fun UserCard(
                         )
                     }
 
-                    // Toggle admin
                     OutlinedButton(
                         onClick = onToggleAdmin,
                         modifier = Modifier.weight(1f),

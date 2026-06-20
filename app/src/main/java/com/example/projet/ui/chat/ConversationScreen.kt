@@ -213,7 +213,6 @@ fun ConversationScreen(
                 }
             }
 
-            // Barre de saisie
             Surface(
                 tonalElevation = 4.dp,
                 modifier = Modifier.fillMaxWidth(),
@@ -505,7 +504,6 @@ fun AudioMessageBubble(message: Message, currentUserId: Int = 0, senderName: Str
                     )
                 }
                 Spacer(Modifier.width(6.dp))
-                // Waveform simulé
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically,

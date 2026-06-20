@@ -106,7 +106,6 @@ fun CreatePostScreen(
             modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Sélecteur de destination
             Text(
                 "Publier dans",
                 style = MaterialTheme.typography.labelMedium,
@@ -157,7 +156,6 @@ fun CreatePostScreen(
             HorizontalDivider()
             Spacer(Modifier.height(16.dp))
 
-            // Onglets type de post
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PostType.entries.forEach { type ->
                     ElevatedButton(
