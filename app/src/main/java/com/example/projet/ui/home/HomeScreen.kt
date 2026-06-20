@@ -101,12 +101,12 @@ fun HomeScreen(
     val utbmDarkColor = Color(0xFF001B3C)
     val addIconColor = Color(0xFF5992E4)
 
+    LaunchedEffect(currentUserId) { postVm.setUserId(currentUserId) }
+
     val posts by postVm.posts.collectAsState()
-    var selectedUe by remember { mutableStateOf<String?>(null) }
-    val ues = remember(posts) { posts.mapNotNull { it.ue }.distinct().sorted() }
-    val filteredPosts = remember(posts, selectedUe) {
-        if (selectedUe == null) posts else posts.filter { it.ue == selectedUe }
-    }
+    val selectedFilter by postVm.selectedFilter.collectAsState()
+    val userUECodes by postVm.userUECodes.collectAsState()
+    val userBranch by postVm.userBranch.collectAsState()
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -164,54 +164,65 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // UE filter chips
-            if (ues.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+            // Filter chips : Général → Branche → UEs
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = selectedFilter is PostFilter.General,
+                    onClick = { postVm.setFilter(PostFilter.General) },
+                    label = { Text("Général") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color(0xFF0055A4),
+                        selectedLabelColor = Color.White
+                    )
+                )
+                if (userBranch.isNotBlank()) {
                     FilterChip(
-                        selected = selectedUe == null,
-                        onClick = { selectedUe = null },
-                        label = { Text("Tout") },
+                        selected = selectedFilter is PostFilter.ByBranch,
+                        onClick = { postVm.setFilter(PostFilter.ByBranch) },
+                        label = { Text(userBranch) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF0055A4),
+                            selectedContainerColor = Color(0xFF5E35B1),
                             selectedLabelColor = Color.White
                         )
                     )
-                    ues.forEach { ue ->
-                        FilterChip(
-                            selected = selectedUe == ue,
-                            onClick = { selectedUe = if (selectedUe == ue) null else ue },
-                            label = { Text(ue) },
-                            leadingIcon = {
-                                Icon(Icons.Filled.School, contentDescription = null, modifier = Modifier.size(14.dp))
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFF34A853),
-                                selectedLabelColor = Color.White,
-                                selectedLeadingIconColor = Color.White
-                            )
-                        )
-                    }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-            } else {
-                Spacer(modifier = Modifier.height(16.dp))
+                userUECodes.forEach { ueCode ->
+                    FilterChip(
+                        selected = selectedFilter is PostFilter.ByUE && (selectedFilter as PostFilter.ByUE).code == ueCode,
+                        onClick = { postVm.setFilter(PostFilter.ByUE(ueCode)) },
+                        label = { Text(ueCode) },
+                        leadingIcon = {
+                            Icon(Icons.Filled.School, contentDescription = null, modifier = Modifier.size(14.dp))
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF34A853),
+                            selectedLabelColor = Color.White,
+                            selectedLeadingIconColor = Color.White
+                        )
+                    )
+                }
             }
 
-            if (filteredPosts.isEmpty()) {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (posts.isEmpty()) {
                 Text(
-                    text = if (selectedUe != null) "Aucun post pour l'UE $selectedUe."
-                           else "Aucun post pour l'instant.\nSoyez le premier à publier !",
+                    text = when (val f = selectedFilter) {
+                        is PostFilter.ByUE -> "Aucun post pour l'UE ${f.code}."
+                        is PostFilter.ByBranch -> "Aucun post pour la branche $userBranch."
+                        else -> "Aucun post pour l'instant.\nSoyez le premier à publier !"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                filteredPosts.forEach { post ->
+                posts.forEach { post ->
                     PostBloc(
                         post = post,
                         vm = postVm,

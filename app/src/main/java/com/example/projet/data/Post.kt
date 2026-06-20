@@ -25,5 +25,6 @@ data class Post(
     var ue: String? = null,
     var voiceFilePath: String? = null,
     var voiceDuration: Long = 0L,
-    var isPoll: Boolean = false
+    var isPoll: Boolean = false,
+    var branch: String? = null
 )
