@@ -24,9 +24,12 @@ import com.example.projet.data.dao.*
         PollOption::class,
         PollVote::class,
         UE::class,
-        UserUE::class
+        UserUE::class,
+        ChatPoll::class,
+        ChatPollOption::class,
+        ChatPollVote::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -46,6 +49,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pollVoteDao(): PollVoteDao
     abstract fun ueDao(): UEDao
     abstract fun userUEDao(): UserUEDao
+    abstract fun chatPollDao(): ChatPollDao
+    abstract fun chatPollOptionDao(): ChatPollOptionDao
+    abstract fun chatPollVoteDao(): ChatPollVoteDao
 
     companion object {
         @Volatile
@@ -156,12 +162,10 @@ abstract class AppDatabase : RoomDatabase() {
         private val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE user ADD COLUMN branch TEXT NOT NULL DEFAULT ''")
-                // Ajout de branch sur ue si la migration 7→8 l'avait créée sans ce champ
                 try {
                     database.execSQL("ALTER TABLE ue ADD COLUMN branch TEXT NOT NULL DEFAULT 'Transversal'")
                     database.execSQL("UPDATE ue SET branch = 'Info' WHERE code IN ('HM40','IT41','IT44','IT45','RE46','RS40','SI40','PA5A','SY43','WE4A','WE4B')")
                 } catch (_: android.database.sqlite.SQLiteException) {
-                    // colonne déjà présente, rien à faire
                 }
                 seedUEs(database)
             }
@@ -194,8 +198,48 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Nouveaux champs sur message
+                database.execSQL("ALTER TABLE message ADD COLUMN messageType TEXT NOT NULL DEFAULT 'TEXT'")
+                database.execSQL("ALTER TABLE message ADD COLUMN audioPath TEXT")
+                database.execSQL("ALTER TABLE message ADD COLUMN audioDuration INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE message ADD COLUMN pollId INTEGER")
+                // Nouveau champ sur chat_item
+                database.execSQL("ALTER TABLE chat_item ADD COLUMN ueCode TEXT")
+                // Tables pour les sondages de chat
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `chat_poll` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `chatItemId` INTEGER NOT NULL,
+                        `question` TEXT NOT NULL,
+                        `creatorId` INTEGER NOT NULL,
+                        `timestamp` INTEGER NOT NULL
+                    )
+                """.trimIndent())
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `chat_poll_option` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `pollId` INTEGER NOT NULL,
+                        `text` TEXT NOT NULL,
+                        `voteCount` INTEGER NOT NULL,
+                        FOREIGN KEY(`pollId`) REFERENCES `chat_poll`(`id`) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_chat_poll_option_pollId` ON `chat_poll_option` (`pollId`)")
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `chat_poll_vote` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `optionId` INTEGER NOT NULL,
+                        `userId` INTEGER NOT NULL,
+                        FOREIGN KEY(`optionId`) REFERENCES `chat_poll_option`(`id`) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_chat_poll_vote_optionId` ON `chat_poll_vote` (`optionId`)")
+            }
+        }
+
         private fun seedUEs(database: SupportSQLiteDatabase) {
-            // Triple : (code, name, branch)  branch = "Info" | "Méca" | "Industrie" | "Méca Ergo" | "Énergie" | "Transversal"
             val ues = listOf(
                 Triple("AM02", "Pratique et création artistique", "Transversal"),
                 Triple("CC01", "Comportement culturel et relations humaines au niveau international", "Transversal"),
@@ -279,7 +323,11 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+                    .addMigrations(
+                        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
+                        MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
+                        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
+                    )
                     .addCallback(SEED_CALLBACK)
                     .fallbackToDestructiveMigration()
                     .build().also { INSTANCE = it }

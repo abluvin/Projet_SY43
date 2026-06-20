@@ -9,8 +9,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.projet.data.*
@@ -42,6 +39,8 @@ fun ChatScreen(
     val profColor = Color(0xFF34A853)
 
     val allChatItems by vm.conversations.collectAsState()
+    val allUEs by vm.allUEs.collectAsState()
+    val profUEs by vm.profUEs.collectAsState()
     var showCreateHubDialog by remember { mutableStateOf(false) }
 
     val filters = listOf("Tout", "Non lus", "Groupes", "Cours")
@@ -89,13 +88,9 @@ fun ChatScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            // Header
             ChatHeader()
-
-            // Search Bar
             SearchBar()
 
-            // Filters
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -137,10 +132,12 @@ fun ChatScreen(
     }
 
     if (showCreateHubDialog) {
+        val uesForPicker = if (profUEs.isNotEmpty()) profUEs.map { it.ue } else allUEs
         CreateHubDialog(
+            availableUEs = uesForPicker,
             onDismiss = { showCreateHubDialog = false },
-            onCreate = { hubName ->
-                vm.createCourseHub(hubName, profName)
+            onCreate = { hubName, ueCode ->
+                vm.createCourseHub(hubName, profName, ueCode)
                 showCreateHubDialog = false
             }
         )
@@ -148,32 +145,163 @@ fun ChatScreen(
 }
 
 @Composable
-fun CreateHubDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
-    var hubName by remember { mutableStateOf("") }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.School, contentDescription = null, tint = Color(0xFF34A853)) },
-        title = { Text("Créer un hub de cours") },
-        text = {
-            OutlinedTextField(
-                value = hubName,
-                onValueChange = { hubName = it.uppercase() },
-                label = { Text("Code ou nom de l'UE") },
-                placeholder = { Text("ex: SY43, MT22...") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { if (hubName.isNotBlank()) onCreate(hubName) },
-                enabled = hubName.isNotBlank()
-            ) { Text("Créer", color = Color(0xFF34A853)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annuler") }
+fun CreateHubDialog(
+    availableUEs: List<UE>,
+    onDismiss: () -> Unit,
+    onCreate: (name: String, ueCode: String?) -> Unit
+) {
+    val utbmBlue = Color(0xFF0055A4)
+    val profColor = Color(0xFF34A853)
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedUE by remember { mutableStateOf<UE?>(null) }
+
+    val filteredUEs = remember(searchQuery, availableUEs) {
+        if (searchQuery.isBlank()) availableUEs
+        else availableUEs.filter {
+            it.code.contains(searchQuery, ignoreCase = true) ||
+            it.name.contains(searchQuery, ignoreCase = true)
         }
-    )
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.8f)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.School,
+                        contentDescription = null,
+                        tint = profColor,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Créer un hub de cours",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = utbmBlue
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                if (selectedUE != null) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = profColor.copy(alpha = 0.1f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    selectedUE!!.code,
+                                    fontWeight = FontWeight.Bold,
+                                    color = profColor,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    selectedUE!!.name,
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                            TextButton(onClick = { selectedUE = null }) {
+                                Text("Changer", color = profColor, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Rechercher une UE…") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = profColor,
+                        unfocusedBorderColor = Color.LightGray
+                    )
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(filteredUEs) { ue ->
+                        val isSelected = selectedUE?.id == ue.id
+                        Surface(
+                            onClick = { selectedUE = if (isSelected) null else ue },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) profColor.copy(alpha = 0.12f) else Color.Transparent
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        ue.code,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) profColor else MaterialTheme.colorScheme.onSurface,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        ue.name,
+                                        fontSize = 11.sp,
+                                        color = Color.Gray,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = profColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text("Annuler", color = Color.Gray) }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val ue = selectedUE
+                            if (ue != null) onCreate("${ue.code} – ${ue.name}", ue.code)
+                        },
+                        enabled = selectedUE != null,
+                        colors = ButtonDefaults.buttonColors(containerColor = profColor)
+                    ) {
+                        Text("Créer")
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -244,7 +372,7 @@ fun FilterChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CourseHubCard(item: com.example.projet.data.ChatItem, lastMessage: String, onClick: () -> Unit) {
+fun CourseHubCard(item: ChatItem, lastMessage: String, onClick: () -> Unit) {
     val utbmBlue = Color(0xFF0055A4)
     Card(
         onClick = onClick,
@@ -270,6 +398,21 @@ fun CourseHubCard(item: com.example.projet.data.ChatItem, lastMessage: String, o
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 1.sp
                 )
+                if (item.ueCode != null) {
+                    Spacer(Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color.White.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            item.ueCode,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            fontSize = 10.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = item.time,
@@ -281,8 +424,10 @@ fun CourseHubCard(item: com.example.projet.data.ChatItem, lastMessage: String, o
             Text(
                 text = item.name,
                 color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -290,7 +435,7 @@ fun CourseHubCard(item: com.example.projet.data.ChatItem, lastMessage: String, o
                 color = Color.White.copy(alpha = 0.85f),
                 fontSize = 13.sp,
                 maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -359,33 +504,38 @@ fun ChatListItem(item: ChatItem, lastMessage: String, onClick: () -> Unit) {
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        text = item.time,
-                        color = Color.Gray,
-                        fontSize = 12.sp
-                    )
+                    Text(text = item.time, color = Color.Gray, fontSize = 12.sp)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (item.messageType == MessageType.VOICE_MESSAGE) {
-                        Icon(Icons.Default.Mic, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Message vocal (0:42)", color = Color.Gray, fontSize = 14.sp)
-                    } else if (item.messageType == MessageType.IMAGE) {
-                        Icon(Icons.Default.Image, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("A envoyé une photo", color = Color.Gray, fontSize = 14.sp)
-                    } else {
-                        Text(
-                            text = lastMessage,
-                            color = if (item.unreadCount > 0) MaterialTheme.colorScheme.onSurface else Color.Gray,
-                            fontSize = 14.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            fontWeight = if (item.unreadCount > 0) FontWeight.Medium else FontWeight.Normal
-                        )
+                    when (item.messageType) {
+                        MessageType.VOICE_MESSAGE -> {
+                            Icon(Icons.Default.Mic, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Message vocal", color = Color.Gray, fontSize = 14.sp)
+                        }
+                        MessageType.IMAGE -> {
+                            Icon(Icons.Default.Image, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("A envoyé une photo", color = Color.Gray, fontSize = 14.sp)
+                        }
+                        MessageType.POLL -> {
+                            Icon(Icons.Default.Poll, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Sondage", color = Color.Gray, fontSize = 14.sp)
+                        }
+                        else -> {
+                            Text(
+                                text = lastMessage,
+                                color = if (item.unreadCount > 0) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = if (item.unreadCount > 0) FontWeight.Medium else FontWeight.Normal
+                            )
+                        }
                     }
-                    
+
                     if (item.unreadCount > 0) {
                         Spacer(modifier = Modifier.weight(1f))
                         Box(

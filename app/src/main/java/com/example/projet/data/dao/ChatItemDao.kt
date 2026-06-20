@@ -14,7 +14,7 @@ interface ChatItemDao {
     fun getById(id: Int): Flow<ChatItem?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(chatItem: ChatItem)
+    suspend fun insert(chatItem: ChatItem): Long
 
     @Update
     suspend fun update(chatItem: ChatItem)

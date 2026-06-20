@@ -14,5 +14,6 @@ data class ChatItem(
     val isGroup: Boolean = false,
     val isCourse: Boolean = false,
     val hasOnlineStatus: Boolean = false,
-    val messageType: MessageType = MessageType.TEXT
+    val messageType: MessageType = MessageType.TEXT,
+    val ueCode: String? = null
 )
