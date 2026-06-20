@@ -10,7 +10,8 @@ class PostRepository(
     private val voiceMessageDao: VoiceMessageDao,
     private val pollDao: PollDao,
     private val pollOptionDao: PollOptionDao,
-    private val pollVoteDao: PollVoteDao
+    private val pollVoteDao: PollVoteDao,
+    private val postLikeDao: PostLikeDao
 ) {
     fun getAll(): Flow<List<Post>> = postDao.getAll()
     fun getByUser(userId: Int): Flow<List<Post>> = postDao.getByUser(userId)
@@ -18,8 +19,15 @@ class PostRepository(
     suspend fun delete(post: Post) = postDao.delete(post)
 
     fun getComments(postId: Int): Flow<List<Comment>> = commentDao.getByPost(postId)
+    fun getCommentsWithAuthors(postId: Int): Flow<List<CommentWithAuthor>> = commentDao.getByPostWithAuthors(postId)
     suspend fun insertComment(comment: Comment): Long = commentDao.insert(comment)
     suspend fun deleteComment(comment: Comment) = commentDao.delete(comment)
+
+    fun getLikeCount(postId: Int): Flow<Int> = postLikeDao.getLikeCount(postId)
+    fun hasUserLiked(postId: Int, userId: Int): Flow<Boolean> = postLikeDao.hasUserLiked(postId, userId)
+    suspend fun getUserLike(postId: Int, userId: Int): PostLike? = postLikeDao.getUserLike(postId, userId)
+    suspend fun insertLike(like: PostLike) = postLikeDao.insert(like)
+    suspend fun deleteLike(like: PostLike) = postLikeDao.delete(like)
 
     fun getVoiceMessages(postId: Int): Flow<List<VoiceMessage>> = voiceMessageDao.getByPost(postId)
     suspend fun insertVoiceMessage(voiceMessage: VoiceMessage): Long = voiceMessageDao.insert(voiceMessage)

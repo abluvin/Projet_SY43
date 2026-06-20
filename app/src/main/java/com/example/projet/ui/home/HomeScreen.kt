@@ -270,6 +270,8 @@ fun PostBloc(
 
     val commentsFlow = remember(post.id) { vm.getComments(post.id) }
     val comments by commentsFlow.collectAsState(initial = emptyList())
+    val likeCount by remember(post.id) { vm.getLikeCount(post.id) }.collectAsState(initial = 0)
+    val hasLiked by remember(post.id) { vm.hasUserLiked(post.id, currentUserId) }.collectAsState(initial = false)
     val pollsFlow = remember(post.id) { vm.getPolls(post.id) }
     val polls by pollsFlow.collectAsState(initial = emptyList())
     val voiceMessagesFlow = remember(post.id) { vm.getVoiceMessages(post.id) }
@@ -278,7 +280,8 @@ fun PostBloc(
     val dateStr = remember(post.timestamp) {
         SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.FRENCH).format(Date(post.timestamp))
     }
-    val authorLabel = if (post.idUser == currentUserId) "Vous" else "Étudiant"
+    val postAuthorName by remember(post.idUser) { vm.getAuthorName(post.idUser) }.collectAsState(initial = "")
+    val authorLabel = if (post.idUser == currentUserId) "Vous" else postAuthorName.ifBlank { "Utilisateur" }
 
     val gradientBrush = Brush.verticalGradient(
         colors = listOf(Color(0xFF003061), Color(0xFF004689))
@@ -377,8 +380,22 @@ fun PostBloc(
                         modifier = Modifier.padding(top = 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Filled.Favorite, contentDescription = "Like", tint = Color.White)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { vm.toggleLike(post.id, currentUserId) }) {
+                                Icon(
+                                    Icons.Filled.Favorite,
+                                    contentDescription = "Like",
+                                    tint = if (hasLiked) Color(0xFFE53935) else Color.White
+                                )
+                            }
+                            if (likeCount > 0) {
+                                Text(
+                                    text = likeCount.toString(),
+                                    color = Color(0xFFE53935),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                         IconButton(onClick = { showComments = !showComments }) {
                             Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Commentaires", tint = Color.White)
@@ -433,12 +450,19 @@ fun PostBloc(
                                 )
                             } else {
                                 comments.forEach { comment ->
-                                    Text(
-                                        text = "• ${comment.content}",
-                                        color = Color.White,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(vertical = 4.dp)
-                                    )
+                                    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                        Text(
+                                            text = comment.authorName,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp
+                                        )
+                                        Text(
+                                            text = comment.content,
+                                            color = Color.White.copy(alpha = 0.9f),
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                    }
                                 }
                             }
 

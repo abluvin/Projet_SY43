@@ -53,6 +53,8 @@ fun CourseScreen(
 
     val chatItem by vm.getChatItem(chatItemId).collectAsState(initial = null)
     val messages by vm.getMessages(chatItemId).collectAsState(initial = emptyList())
+    val allUsers by vm.allUsers.collectAsState()
+    val usersById = remember(allUsers) { allUsers.associateBy({ it.id }, { it.name }) }
     var inputText by remember { mutableStateOf("") }
     var isAnnouncementMode by remember { mutableStateOf(false) }
     var inputMode by remember { mutableStateOf(CourseInputMode.TEXT) }
@@ -203,17 +205,20 @@ fun CourseScreen(
                     }
                 } else {
                     items(messages) { message ->
+                        val isFromUser = message.senderId != 0 && message.senderId == currentUserId
+                        val senderName = if (!isFromUser) usersById[message.senderId] else null
                         when {
-                            message.isAnnouncement -> AnnouncementCard(message = message)
-                            message.messageType == MessageType.VOICE_MESSAGE -> AudioMessageBubble(message, currentUserId)
+                            message.isAnnouncement -> AnnouncementCard(message = message, senderName = senderName)
+                            message.messageType == MessageType.VOICE_MESSAGE -> AudioMessageBubble(message, currentUserId, senderName)
                             message.messageType == MessageType.POLL && message.pollId != null ->
                                 PollBubble(
                                     message = message,
                                     pollId = message.pollId,
                                     currentUserId = currentUserId,
-                                    vm = vm
+                                    vm = vm,
+                                    senderName = senderName
                                 )
-                            else -> HubMessageCard(message = message)
+                            else -> HubMessageCard(message = message, senderName = senderName)
                         }
                     }
                 }
@@ -416,7 +421,7 @@ fun CourseScreen(
 }
 
 @Composable
-fun AnnouncementCard(message: Message) {
+fun AnnouncementCard(message: Message, senderName: String? = null) {
     val announcementColor = Color(0xFFE65100)
     Surface(
         color = announcementColor.copy(alpha = 0.08f),
@@ -431,6 +436,9 @@ fun AnnouncementCard(message: Message) {
             ) {
                 Icon(Icons.Default.Campaign, contentDescription = null, tint = announcementColor, modifier = Modifier.size(16.dp))
                 Text("ANNONCE", color = announcementColor, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                if (senderName != null) {
+                    Text("· $senderName", fontSize = 11.sp, color = Color.Gray)
+                }
                 Spacer(Modifier.weight(1f))
                 Text(message.time, fontSize = 10.sp, color = Color.Gray)
             }
@@ -442,22 +450,33 @@ fun AnnouncementCard(message: Message) {
 }
 
 @Composable
-fun HubMessageCard(message: Message) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 2.dp),
-            shadowElevation = 1.dp,
-            modifier = Modifier.widthIn(max = 300.dp)
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(text = message.text, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    text = message.time,
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                    modifier = Modifier.align(Alignment.End)
-                )
+fun HubMessageCard(message: Message, senderName: String? = null) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        if (senderName != null) {
+            Text(
+                text = senderName,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF0055A4),
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+            )
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 2.dp),
+                shadowElevation = 1.dp,
+                modifier = Modifier.widthIn(max = 300.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(text = message.text, fontSize = 15.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = message.time,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        modifier = Modifier.align(Alignment.End)
+                    )
+                }
             }
         }
     }

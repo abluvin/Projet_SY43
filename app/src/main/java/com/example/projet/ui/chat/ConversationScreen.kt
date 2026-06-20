@@ -50,6 +50,8 @@ fun ConversationScreen(
     val directChatName by vm.getDirectChatName(chatItemId).collectAsState(initial = null)
     val displayName = if (!item.isGroup && !item.isCourse) directChatName ?: item.name else item.name
     val messages by vm.getMessages(chatItemId).collectAsState(initial = emptyList())
+    val allUsers by vm.allUsers.collectAsState()
+    val usersById = remember(allUsers) { allUsers.associateBy({ it.id }, { it.name }) }
     val listState = rememberLazyListState()
 
     var newMessageText by remember { mutableStateOf("") }
@@ -182,19 +184,22 @@ fun ConversationScreen(
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
                 items(messages) { message ->
+                    val isFromUser = message.senderId != 0 && message.senderId == currentUserId
+                    val senderName = if (item.isGroup && !isFromUser) usersById[message.senderId] else null
                     when (message.messageType) {
-                        MessageType.VOICE_MESSAGE -> AudioMessageBubble(message, currentUserId)
+                        MessageType.VOICE_MESSAGE -> AudioMessageBubble(message, currentUserId, senderName)
                         MessageType.POLL -> {
                             if (message.pollId != null) {
                                 PollBubble(
                                     message = message,
                                     pollId = message.pollId,
                                     currentUserId = currentUserId,
-                                    vm = vm
+                                    vm = vm,
+                                    senderName = senderName
                                 )
-                            } else MessageBubble(message, currentUserId)
+                            } else MessageBubble(message, currentUserId, senderName)
                         }
-                        else -> MessageBubble(message, currentUserId)
+                        else -> MessageBubble(message, currentUserId, senderName)
                     }
                 }
             }
@@ -374,7 +379,7 @@ private fun AudioPreviewBar(durationMs: Long, onSend: () -> Unit, onCancel: () -
 }
 
 @Composable
-fun MessageBubble(message: Message, currentUserId: Int = 0) {
+fun MessageBubble(message: Message, currentUserId: Int = 0, senderName: String? = null) {
     val isFromUser = message.senderId != 0 && message.senderId == currentUserId
     val bubbleColor = if (isFromUser) Color(0xFF0055A4) else MaterialTheme.colorScheme.surfaceVariant
     val textColor = if (isFromUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
@@ -386,6 +391,15 @@ fun MessageBubble(message: Message, currentUserId: Int = 0) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalAlignment = alignment
     ) {
+        if (senderName != null) {
+            Text(
+                text = senderName,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF0055A4),
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+            )
+        }
         Surface(
             color = bubbleColor,
             shape = shape,
@@ -406,7 +420,7 @@ fun MessageBubble(message: Message, currentUserId: Int = 0) {
 }
 
 @Composable
-fun AudioMessageBubble(message: Message, currentUserId: Int = 0) {
+fun AudioMessageBubble(message: Message, currentUserId: Int = 0, senderName: String? = null) {
     val context = LocalContext.current
     val utbmBlue = Color(0xFF0055A4)
     val isFromUser = message.senderId != 0 && message.senderId == currentUserId
@@ -430,6 +444,15 @@ fun AudioMessageBubble(message: Message, currentUserId: Int = 0) {
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalAlignment = alignment
     ) {
+        if (senderName != null) {
+            Text(
+                text = senderName,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF0055A4),
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+            )
+        }
         Surface(
             color = bubbleColor,
             shape = shape,
@@ -496,7 +519,8 @@ fun PollBubble(
     message: Message,
     pollId: Int,
     currentUserId: Int,
-    vm: ChatViewModel
+    vm: ChatViewModel,
+    senderName: String? = null
 ) {
     val utbmBlue = Color(0xFF0055A4)
     val options by vm.getPollOptions(pollId).collectAsState(initial = emptyList())
@@ -510,6 +534,15 @@ fun PollBubble(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalAlignment = alignment
     ) {
+        if (senderName != null) {
+            Text(
+                text = senderName,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF0055A4),
+                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
+            )
+        }
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             shape = RoundedCornerShape(16.dp),

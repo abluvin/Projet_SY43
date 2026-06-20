@@ -8,6 +8,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.projet.data.ChatMember
+import com.example.projet.data.PostLike
 import com.example.projet.data.dao.*
 
 @Database(
@@ -29,9 +30,10 @@ import com.example.projet.data.dao.*
         ChatPoll::class,
         ChatPollOption::class,
         ChatPollVote::class,
-        ChatMember::class
+        ChatMember::class,
+        PostLike::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -55,6 +57,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun chatPollOptionDao(): ChatPollOptionDao
     abstract fun chatPollVoteDao(): ChatPollVoteDao
     abstract fun chatMemberDao(): ChatMemberDao
+    abstract fun postLikeDao(): PostLikeDao
 
     companion object {
         @Volatile
@@ -198,6 +201,23 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("CREATE INDEX IF NOT EXISTS `index_user_ue_ueId` ON `user_ue` (`ueId`)")
                 database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_user_ue_userId_ueId` ON `user_ue` (`userId`, `ueId`)")
                 seedUEs(database)
+            }
+        }
+
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `post_like` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `postId` INTEGER NOT NULL,
+                        `userId` INTEGER NOT NULL,
+                        FOREIGN KEY(`postId`) REFERENCES `post`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_post_like_postId` ON `post_like` (`postId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_post_like_userId` ON `post_like` (`userId`)")
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_post_like_postId_userId` ON `post_like` (`postId`, `userId`)")
             }
         }
 
@@ -374,7 +394,7 @@ abstract class AppDatabase : RoomDatabase() {
                         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
                         MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
                         MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
-                        MIGRATION_13_14, MIGRATION_14_15
+                        MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16
                     )
                     .addCallback(SEED_CALLBACK)
                     .fallbackToDestructiveMigration()

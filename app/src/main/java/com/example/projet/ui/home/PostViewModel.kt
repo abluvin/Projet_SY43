@@ -28,7 +28,8 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         val db = (application as ProjetApplication).database
         repo = PostRepository(
             db.postDao(), db.commentDao(),
-            db.voiceMessageDao(), db.pollDao(), db.pollOptionDao(), db.pollVoteDao()
+            db.voiceMessageDao(), db.pollDao(), db.pollOptionDao(), db.pollVoteDao(),
+            db.postLikeDao()
         )
         ueRepo = UERepository(db.ueDao(), db.userUEDao())
         userRepo = UserRepository(db.userDao())
@@ -96,7 +97,23 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deletePost(post: Post) { viewModelScope.launch { repo.delete(post) } }
 
-    fun getComments(postId: Int): Flow<List<Comment>> = repo.getComments(postId)
+    fun getComments(postId: Int): Flow<List<CommentWithAuthor>> = repo.getCommentsWithAuthors(postId)
+
+    fun getAuthorName(userId: Int): Flow<String> = flow {
+        emit(userRepo.getById(userId)?.name ?: "Utilisateur")
+    }
+
+    fun getLikeCount(postId: Int): Flow<Int> = repo.getLikeCount(postId)
+
+    fun toggleLike(postId: Int, userId: Int) {
+        viewModelScope.launch {
+            val existing = repo.getUserLike(postId, userId)
+            if (existing != null) repo.deleteLike(existing)
+            else repo.insertLike(PostLike(postId = postId, userId = userId))
+        }
+    }
+
+    fun hasUserLiked(postId: Int, userId: Int): Flow<Boolean> = repo.hasUserLiked(postId, userId)
 
     fun addComment(postId: Int, userId: Int, content: String) {
         viewModelScope.launch {
