@@ -35,7 +35,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         db.messageDao(),
         db.chatPollDao(),
         db.chatPollOptionDao(),
-        db.chatPollVoteDao()
+        db.chatPollVoteDao(),
+        db.chatMemberDao()
     )
     private val userDao = db.userDao()
     private val userUEDao = db.userUEDao()
@@ -44,7 +45,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentUserId = MutableStateFlow(0)
     val currentUserId: StateFlow<Int> = _currentUserId
 
-    val conversations: StateFlow<List<ChatItem>> = repo.getAllConversations()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val conversations: StateFlow<List<ChatItem>> = _currentUserId
+        .flatMapLatest { uid ->
+            if (uid == 0) flowOf(emptyList())
+            else repo.getConversationsForUser(uid)
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allUsers: StateFlow<List<User>> = userDao.getAll()
@@ -85,7 +91,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun sendMessage(chatItemId: Int, text: String) {
         viewModelScope.launch {
             val time = now()
-            repo.insertMessage(Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time))
+            repo.insertMessage(Message(chatItemId = chatItemId, text = text, senderId = _currentUserId.value, time = time))
         }
     }
 
@@ -96,7 +102,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 Message(
                     chatItemId = chatItemId,
                     text = text,
-                    isFromUser = true,
+                    senderId = _currentUserId.value,
                     time = time,
                     isAnnouncement = true
                 )
@@ -111,7 +117,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 Message(
                     chatItemId = chatItemId,
                     text = "Message vocal",
-                    isFromUser = true,
+                    senderId = _currentUserId.value,
                     time = time,
                     messageType = MessageType.VOICE_MESSAGE,
                     audioPath = audioPath,
@@ -138,7 +144,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 Message(
                     chatItemId = chatItemId,
                     text = question,
-                    isFromUser = true,
+                    senderId = _currentUserId.value,
                     time = time,
                     messageType = MessageType.POLL,
                     pollId = pollId.toInt()
@@ -169,7 +175,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun createDirectConversation(contactName: String, onCreated: (Int) -> Unit) {
+    fun createDirectConversation(contactName: String, memberIds: List<Int>, onCreated: (Int) -> Unit) {
         viewModelScope.launch {
             val time = now()
             val id = repo.insertConversation(
@@ -181,11 +187,12 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     isGroup = false
                 )
             )
+            memberIds.forEach { repo.addMember(id.toInt(), it) }
             onCreated(id.toInt())
         }
     }
 
-    fun createGroupConversation(members: List<String>, onCreated: (Int) -> Unit) {
+    fun createGroupConversation(members: List<String>, memberIds: List<Int>, onCreated: (Int) -> Unit) {
         viewModelScope.launch {
             val time = now()
             val name = members.joinToString(", ")
@@ -198,6 +205,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                     isGroup = true
                 )
             )
+            memberIds.forEach { repo.addMember(id.toInt(), it) }
             onCreated(id.toInt())
         }
     }
@@ -218,9 +226,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         items.forEach { repo.insertConversation(it) }
 
         listOf(
-            Message(chatItemId = 1, text = "Salut ! Tu as pu avancer sur le projet SY43 ?", isFromUser = false, time = "10:00"),
-            Message(chatItemId = 1, text = "Oui, j'ai fini la partie UI du chat.", isFromUser = true, time = "10:05"),
-            Message(chatItemId = 1, text = "Top ! Je m'occupe de la base de données alors.", isFromUser = false, time = "10:06")
+            Message(chatItemId = 1, text = "Salut ! Tu as pu avancer sur le projet SY43 ?", senderId = 0, time = "10:00"),
+            Message(chatItemId = 1, text = "Oui, j'ai fini la partie UI du chat.", senderId = 0, time = "10:05"),
+            Message(chatItemId = 1, text = "Top ! Je m'occupe de la base de données alors.", senderId = 0, time = "10:06")
         ).forEach { repo.insertMessage(it) }
     }
 }

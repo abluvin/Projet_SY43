@@ -181,7 +181,7 @@ fun ConversationScreen(
             ) {
                 items(messages) { message ->
                     when (message.messageType) {
-                        MessageType.VOICE_MESSAGE -> AudioMessageBubble(message)
+                        MessageType.VOICE_MESSAGE -> AudioMessageBubble(message, currentUserId)
                         MessageType.POLL -> {
                             if (message.pollId != null) {
                                 PollBubble(
@@ -190,9 +190,9 @@ fun ConversationScreen(
                                     currentUserId = currentUserId,
                                     vm = vm
                                 )
-                            } else MessageBubble(message)
+                            } else MessageBubble(message, currentUserId)
                         }
-                        else -> MessageBubble(message)
+                        else -> MessageBubble(message, currentUserId)
                     }
                 }
             }
@@ -372,11 +372,12 @@ private fun AudioPreviewBar(durationMs: Long, onSend: () -> Unit, onCancel: () -
 }
 
 @Composable
-fun MessageBubble(message: Message) {
-    val bubbleColor = if (message.isFromUser) Color(0xFF0055A4) else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (message.isFromUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-    val alignment = if (message.isFromUser) Alignment.End else Alignment.Start
-    val shape = if (message.isFromUser) RoundedCornerShape(16.dp, 16.dp, 2.dp, 16.dp)
+fun MessageBubble(message: Message, currentUserId: Int = 0) {
+    val isFromUser = message.senderId != 0 && message.senderId == currentUserId
+    val bubbleColor = if (isFromUser) Color(0xFF0055A4) else MaterialTheme.colorScheme.surfaceVariant
+    val textColor = if (isFromUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    val alignment = if (isFromUser) Alignment.End else Alignment.Start
+    val shape = if (isFromUser) RoundedCornerShape(16.dp, 16.dp, 2.dp, 16.dp)
                 else RoundedCornerShape(16.dp, 16.dp, 16.dp, 2.dp)
 
     Column(
@@ -393,7 +394,7 @@ fun MessageBubble(message: Message) {
                 Text(text = message.text, color = textColor, fontSize = 15.sp)
                 Text(
                     text = message.time,
-                    color = if (message.isFromUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                    color = if (isFromUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
                     fontSize = 10.sp,
                     modifier = Modifier.align(Alignment.End)
                 )
@@ -403,13 +404,14 @@ fun MessageBubble(message: Message) {
 }
 
 @Composable
-fun AudioMessageBubble(message: Message) {
+fun AudioMessageBubble(message: Message, currentUserId: Int = 0) {
     val context = LocalContext.current
     val utbmBlue = Color(0xFF0055A4)
-    val alignment = if (message.isFromUser) Alignment.End else Alignment.Start
-    val bubbleColor = if (message.isFromUser) utbmBlue else MaterialTheme.colorScheme.surfaceVariant
-    val contentColor = if (message.isFromUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-    val shape = if (message.isFromUser) RoundedCornerShape(16.dp, 16.dp, 2.dp, 16.dp)
+    val isFromUser = message.senderId != 0 && message.senderId == currentUserId
+    val alignment = if (isFromUser) Alignment.End else Alignment.Start
+    val bubbleColor = if (isFromUser) utbmBlue else MaterialTheme.colorScheme.surfaceVariant
+    val contentColor = if (isFromUser) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    val shape = if (isFromUser) RoundedCornerShape(16.dp, 16.dp, 2.dp, 16.dp)
                 else RoundedCornerShape(16.dp, 16.dp, 16.dp, 2.dp)
 
     var isPlaying by remember { mutableStateOf(false) }
@@ -499,7 +501,8 @@ fun PollBubble(
     val userVotes by vm.getUserVotesForPoll(currentUserId, pollId).collectAsState(initial = emptyList())
     val votedOptionIds = userVotes.map { it.optionId }.toSet()
     val totalVotes = options.sumOf { it.voteCount }
-    val alignment = if (message.isFromUser) Alignment.End else Alignment.Start
+    val isFromUser = message.senderId != 0 && message.senderId == currentUserId
+    val alignment = if (isFromUser) Alignment.End else Alignment.Start
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),

@@ -205,7 +205,7 @@ fun CourseScreen(
                     items(messages) { message ->
                         when {
                             message.isAnnouncement -> AnnouncementCard(message = message)
-                            message.messageType == MessageType.VOICE_MESSAGE -> AudioMessageBubble(message)
+                            message.messageType == MessageType.VOICE_MESSAGE -> AudioMessageBubble(message, currentUserId)
                             message.messageType == MessageType.POLL && message.pollId != null ->
                                 PollBubble(
                                     message = message,

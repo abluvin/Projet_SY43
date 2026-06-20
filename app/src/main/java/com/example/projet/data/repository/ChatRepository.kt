@@ -1,11 +1,13 @@
 package com.example.projet.data.repository
 
 import com.example.projet.data.ChatItem
+import com.example.projet.data.ChatMember
 import com.example.projet.data.ChatPoll
 import com.example.projet.data.ChatPollOption
 import com.example.projet.data.ChatPollVote
 import com.example.projet.data.Message
 import com.example.projet.data.dao.ChatItemDao
+import com.example.projet.data.dao.ChatMemberDao
 import com.example.projet.data.dao.ChatPollDao
 import com.example.projet.data.dao.ChatPollOptionDao
 import com.example.projet.data.dao.ChatPollVoteDao
@@ -17,10 +19,16 @@ class ChatRepository(
     private val messageDao: MessageDao,
     private val chatPollDao: ChatPollDao,
     private val chatPollOptionDao: ChatPollOptionDao,
-    private val chatPollVoteDao: ChatPollVoteDao
+    private val chatPollVoteDao: ChatPollVoteDao,
+    private val chatMemberDao: ChatMemberDao
 ) {
 
     fun getAllConversations(): Flow<List<ChatItem>> = chatItemDao.getAll()
+
+    fun getConversationsForUser(userId: Int): Flow<List<ChatItem>> = chatItemDao.getForUser(userId)
+
+    suspend fun addMember(chatItemId: Int, userId: Int) =
+        chatMemberDao.insert(ChatMember(chatItemId = chatItemId, userId = userId))
 
     fun getChatItem(id: Int): Flow<ChatItem?> = chatItemDao.getById(id)
 

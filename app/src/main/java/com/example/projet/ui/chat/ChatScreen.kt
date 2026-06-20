@@ -89,7 +89,6 @@ fun ChatScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             ChatHeader()
-            SearchBar()
 
             LazyRow(
                 modifier = Modifier

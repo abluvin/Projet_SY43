@@ -20,7 +20,7 @@ data class Message(
     val id: Int = 0,
     val chatItemId: Int = 0,
     val text: String,
-    val isFromUser: Boolean,
+    val senderId: Int = 0,
     val time: String,
     val isAnnouncement: Boolean = false,
     val messageType: MessageType = MessageType.TEXT,

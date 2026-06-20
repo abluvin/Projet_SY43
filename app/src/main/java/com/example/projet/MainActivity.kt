@@ -522,13 +522,16 @@ fun MainApp(
                 onDismiss = { showNewChatDialog = false },
                 onStartDirectChat = { user ->
                     showNewChatDialog = false
-                    chatVM.createDirectConversation(user.name) { id ->
+                    chatVM.createDirectConversation(user.name, listOf(userId, user.id)) { id ->
                         navController.navigate(Routes.conversation(id))
                     }
                 },
                 onCreateGroup = { users ->
                     showNewChatDialog = false
-                    chatVM.createGroupConversation(users.map { it.name }) { id ->
+                    chatVM.createGroupConversation(
+                        users.map { it.name },
+                        users.map { it.id } + userId
+                    ) { id ->
                         navController.navigate(Routes.conversation(id))
                     }
                 }
