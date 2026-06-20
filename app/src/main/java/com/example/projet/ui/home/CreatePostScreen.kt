@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,30 +35,43 @@ import com.example.projet.ui.utils.AudioRecorderManager
 
 private enum class PostType { TEXT, VOICE, POLL }
 
+private sealed class PostDestination {
+    object General : PostDestination()
+    object Branch : PostDestination()
+    data class UE(val code: String) : PostDestination()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePostScreen(
     isProf: Boolean = false,
-    onPostCreated: (String, Uri?, String?) -> Unit,
-    onVoicePostCreated: ((String, Long) -> Unit)? = null,
-    onPollCreated: ((String, List<String>) -> Unit)? = null,
+    userUECodes: List<String> = emptyList(),
+    userBranch: String = "",
+    onPostCreated: (String, Uri?, String?, String?) -> Unit,
+    onVoicePostCreated: ((String, Long, String?, String?) -> Unit)? = null,
+    onPollCreated: ((String, List<String>, String?, String?) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val utbmBlue = Color(0xFF0055A4)
-    val profColor = Color(0xFF34A853)
     val context = LocalContext.current
     val audioManager = remember { AudioRecorderManager(context) }
 
     var postType by remember { mutableStateOf(PostType.TEXT) }
     var postText by remember { mutableStateOf("") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-    var ueText by remember { mutableStateOf("") }
+    var destination by remember { mutableStateOf<PostDestination>(PostDestination.General) }
     var isRecording by remember { mutableStateOf(false) }
     var recordingTime by remember { mutableStateOf(0L) }
     var recordedFilePath by remember { mutableStateOf<String?>(null) }
     var recordingError by remember { mutableStateOf(false) }
     var pollQuestion by remember { mutableStateOf("") }
     var pollOptions by remember { mutableStateOf(listOf("", "")) }
+
+    val (destUE, destBranch) = when (val d = destination) {
+        is PostDestination.General -> null to null
+        is PostDestination.Branch -> null to userBranch.ifBlank { null }
+        is PostDestination.UE -> d.code to null
+    }
 
     fun tryStartRecording() {
         recordingError = false
@@ -92,7 +106,58 @@ fun CreatePostScreen(
             modifier = Modifier.padding(padding).fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Onglets
+            // Sélecteur de destination
+            Text(
+                "Publier dans",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = destination is PostDestination.General,
+                    onClick = { destination = PostDestination.General },
+                    label = { Text("Général") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = utbmBlue,
+                        selectedLabelColor = Color.White
+                    )
+                )
+                if (userBranch.isNotBlank()) {
+                    FilterChip(
+                        selected = destination is PostDestination.Branch,
+                        onClick = { destination = PostDestination.Branch },
+                        label = { Text(userBranch) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF5E35B1),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+                userUECodes.forEach { code ->
+                    FilterChip(
+                        selected = destination is PostDestination.UE && (destination as PostDestination.UE).code == code,
+                        onClick = { destination = PostDestination.UE(code) },
+                        label = { Text(code) },
+                        leadingIcon = { Icon(Icons.Filled.School, null, Modifier.size(14.dp)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF34A853),
+                            selectedLabelColor = Color.White,
+                            selectedLeadingIconColor = Color.White
+                        )
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+
+            // Onglets type de post
             Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PostType.entries.forEach { type ->
                     ElevatedButton(
@@ -102,29 +167,24 @@ fun CreatePostScreen(
                             containerColor = if (postType == type) utbmBlue else MaterialTheme.colorScheme.surface
                         )
                     ) {
-                        Text(when (type) { PostType.TEXT -> "Texte"; PostType.VOICE -> "Vocal"; PostType.POLL -> "Sondage" },
-                            color = if (postType == type) Color.White else Color.Black, fontSize = 13.sp)
+                        Text(
+                            when (type) { PostType.TEXT -> "Texte"; PostType.VOICE -> "Vocal"; PostType.POLL -> "Sondage" },
+                            color = if (postType == type) Color.White else Color.Black,
+                            fontSize = 13.sp
+                        )
                     }
                 }
             }
 
             when (postType) {
                 PostType.TEXT -> {
-                    // Champ UE pour profs
-                    if (isProf) {
-                        Surface(color = profColor.copy(alpha = 0.08f), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Icon(Icons.Filled.School, contentDescription = null, tint = profColor, modifier = Modifier.size(18.dp))
-                                    Text("Post lié à une UE (optionnel)", color = profColor, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodySmall)
-                                }
-                                Spacer(Modifier.height(8.dp))
-                                OutlinedTextField(value = ueText, onValueChange = { ueText = it.uppercase() }, label = { Text("Code UE (ex: SY43)") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp), singleLine = true)
-                            }
-                        }
-                        Spacer(Modifier.height(16.dp))
-                    }
-                    OutlinedTextField(value = postText, onValueChange = { postText = it }, label = { Text("Quoi de neuf ?") }, modifier = Modifier.fillMaxWidth().height(200.dp), placeholder = { Text("Écrivez votre post ici...") })
+                    OutlinedTextField(
+                        value = postText,
+                        onValueChange = { postText = it },
+                        label = { Text("Quoi de neuf ?") },
+                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                        placeholder = { Text("Écrivez votre post ici...") }
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     if (selectedImageUri != null) {
                         Image(painter = rememberAsyncImagePainter(selectedImageUri), contentDescription = null, modifier = Modifier.fillMaxWidth().height(200.dp), contentScale = ContentScale.Crop)
@@ -196,9 +256,12 @@ fun CreatePostScreen(
             Button(
                 onClick = {
                     when (postType) {
-                        PostType.TEXT -> onPostCreated(postText, selectedImageUri, ueText.ifBlank { null })
-                        PostType.VOICE -> recordedFilePath?.let { onVoicePostCreated?.invoke(it, recordingTime) }
-                        PostType.POLL -> { if (pollQuestion.isNotBlank() && pollOptions.count { it.isNotBlank() } >= 2) onPollCreated?.invoke(pollQuestion, pollOptions.filter { it.isNotBlank() }) }
+                        PostType.TEXT -> onPostCreated(postText, selectedImageUri, destUE, destBranch)
+                        PostType.VOICE -> recordedFilePath?.let { onVoicePostCreated?.invoke(it, recordingTime, destUE, destBranch) }
+                        PostType.POLL -> {
+                            if (pollQuestion.isNotBlank() && pollOptions.count { it.isNotBlank() } >= 2)
+                                onPollCreated?.invoke(pollQuestion, pollOptions.filter { it.isNotBlank() }, destUE, destBranch)
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),

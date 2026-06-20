@@ -339,6 +339,9 @@ fun MainApp(
     val adminVM: AdminViewModel = viewModel()
     val collaborationUserId = "user_${username.lowercase().replace(" ", "_")}"
 
+    val postUserUECodes by postVM.userUECodes.collectAsState()
+    val postUserBranch by postVM.userBranch.collectAsState()
+
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -459,16 +462,18 @@ fun MainApp(
                 composable(Routes.CREATE_POST) {
                     CreatePostScreen(
                         isProf = isProf,
-                        onPostCreated = { text, uri, ue ->
-                            postVM.createPost(text, uri?.toString(), userId, ue)
+                        userUECodes = postUserUECodes,
+                        userBranch = postUserBranch,
+                        onPostCreated = { text, uri, ue, branch ->
+                            postVM.createPost(text, uri?.toString(), userId, ue, branch)
                             navController.popBackStack()
                         },
-                        onVoicePostCreated = { filePath, duration ->
-                            postVM.createVoicePost(filePath, duration, userId)
+                        onVoicePostCreated = { filePath, duration, ue, branch ->
+                            postVM.createVoicePost(filePath, duration, userId, ue, branch)
                             navController.popBackStack()
                         },
-                        onPollCreated = { question, options ->
-                            postVM.createPostWithPollOptions(question, userId, options)
+                        onPollCreated = { question, options, ue, branch ->
+                            postVM.createPostWithPollOptions(question, userId, options, ue, branch)
                             navController.popBackStack()
                         },
                         onBack = { navController.popBackStack() }

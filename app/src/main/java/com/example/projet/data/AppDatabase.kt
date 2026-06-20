@@ -26,7 +26,7 @@ import com.example.projet.data.dao.*
         UE::class,
         UserUE::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -131,6 +131,12 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("""CREATE TABLE IF NOT EXISTS `poll_vote` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `optionId` INTEGER NOT NULL, `userId` INTEGER NOT NULL, `timestamp` INTEGER NOT NULL, FOREIGN KEY(`optionId`) REFERENCES `poll_option`(`id`) ON DELETE CASCADE, FOREIGN KEY(`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE)""")
                 database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_vote_optionId` ON `poll_vote` (`optionId`)")
                 database.execSQL("CREATE INDEX IF NOT EXISTS `index_poll_vote_userId` ON `poll_vote` (`userId`)")
+            }
+        }
+
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE post ADD COLUMN branch TEXT")
             }
         }
 
@@ -273,7 +279,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                     .addCallback(SEED_CALLBACK)
                     .fallbackToDestructiveMigration()
                     .build().also { INSTANCE = it }
