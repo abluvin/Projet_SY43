@@ -30,6 +30,9 @@ class ChatRepository(
     suspend fun addMember(chatItemId: Int, userId: Int) =
         chatMemberDao.insert(ChatMember(chatItemId = chatItemId, userId = userId))
 
+    fun getOtherMemberName(chatItemId: Int, currentUserId: Int): Flow<String?> =
+        chatMemberDao.getOtherMemberName(chatItemId, currentUserId)
+
     fun getChatItem(id: Int): Flow<ChatItem?> = chatItemDao.getById(id)
 
     suspend fun insertConversation(chatItem: ChatItem): Long = chatItemDao.insert(chatItem)

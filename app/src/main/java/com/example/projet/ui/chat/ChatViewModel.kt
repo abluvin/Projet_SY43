@@ -77,6 +77,9 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         _currentUserId.value = userId
     }
 
+    fun getDirectChatName(chatItemId: Int): Flow<String?> =
+        repo.getOtherMemberName(chatItemId, _currentUserId.value)
+
     fun getMessages(chatItemId: Int): Flow<List<Message>> = repo.getMessages(chatItemId)
 
     fun getChatItem(id: Int): Flow<ChatItem?> = repo.getChatItem(id)
