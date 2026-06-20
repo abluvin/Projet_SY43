@@ -122,13 +122,19 @@ fun ChatScreen(
                         CourseHubCard(
                             item = item,
                             lastMessage = lastMsg ?: item.lastMessage,
-                            onClick = { onConversationClick(item) }
+                            onClick = { 
+                                vm.markAsRead(item.id)
+                                onConversationClick(item) 
+                            }
                         )
                     } else {
                         ChatListItem(
                             item = item,
                             lastMessage = lastMsg ?: item.lastMessage,
-                            onClick = { onConversationClick(item) }
+                            onClick = { 
+                                vm.markAsRead(item.id)
+                                onConversationClick(item) 
+                            }
                         )
                     }
                 }

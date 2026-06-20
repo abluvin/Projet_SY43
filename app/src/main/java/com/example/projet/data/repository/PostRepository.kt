@@ -10,7 +10,8 @@ class PostRepository(
     private val voiceMessageDao: VoiceMessageDao,
     private val pollDao: PollDao,
     private val pollOptionDao: PollOptionDao,
-    private val pollVoteDao: PollVoteDao
+    private val pollVoteDao: PollVoteDao,
+    private val likeDao: LikeDao
 ) {
     fun getAll(): Flow<List<Post>> = postDao.getAll()
     fun getByUser(userId: Int): Flow<List<Post>> = postDao.getByUser(userId)
@@ -38,4 +39,9 @@ class PostRepository(
     suspend fun getUserVote(optionId: Int, userId: Int): PollVote? = pollVoteDao.getUserVote(optionId, userId)
     suspend fun insertPollVote(pollVote: PollVote): Long = pollVoteDao.insert(pollVote)
     suspend fun deletePollVote(pollVote: PollVote) = pollVoteDao.delete(pollVote)
+
+    fun getLikeCount(postId: Int): Flow<Int> = likeDao.getLikeCount(postId)
+    fun isLikedByUser(postId: Int, userId: Int): Flow<Boolean> = likeDao.isLikedByUser(postId, userId)
+    suspend fun insertLike(like: Like) = likeDao.insert(like)
+    suspend fun deleteLike(postId: Int, userId: Int) = likeDao.delete(postId, userId)
 }

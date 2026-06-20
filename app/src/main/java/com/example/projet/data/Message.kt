@@ -19,8 +19,14 @@ data class Message(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val chatItemId: Int = 0,
-    val text: String,
+    val text: String = "",
     val isFromUser: Boolean,
     val time: String,
-    val isAnnouncement: Boolean = false
+    val isAnnouncement: Boolean = false,
+    val type: MessageType = MessageType.TEXT,
+    val voiceFilePath: String? = null,
+    val voiceDuration: Long = 0L,
+    val pollQuestion: String? = null,
+    val pollOptions: List<String>? = null,
+    val pollVotes: Map<Int, Int>? = null // OptionIndex to VoteCount
 )

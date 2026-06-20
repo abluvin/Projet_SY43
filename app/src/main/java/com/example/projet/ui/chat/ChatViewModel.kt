@@ -7,7 +7,9 @@ import com.example.projet.ProjetApplication
 import com.example.projet.data.ChatItem
 import com.example.projet.data.Message
 import com.example.projet.data.MessageType
+import com.example.projet.data.User
 import com.example.projet.data.repository.ChatRepository
+import com.example.projet.data.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,15 +22,21 @@ import java.time.format.DateTimeFormatter
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repo: ChatRepository
+    private val userRepo: UserRepository
+
     init {
         val db = (application as ProjetApplication).database
         repo = ChatRepository(db.chatItemDao(), db.messageDao())
+        userRepo = UserRepository(db.userDao())
         viewModelScope.launch {
             if (repo.getAllConversations().first().isEmpty()) seedConversations()
         }
     }
 
     val conversations: StateFlow<List<ChatItem>> = repo.getAllConversations()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allUsers: StateFlow<List<User>> = userRepo.getAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun getMessages(chatItemId: Int): Flow<List<Message>> = repo.getMessages(chatItemId)
@@ -40,14 +48,93 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun sendMessage(chatItemId: Int, text: String) {
         viewModelScope.launch {
             val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-            repo.insertMessage(Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time))
+            repo.insertMessage(Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time, type = MessageType.TEXT))
+            repo.updateLastMessage(chatItemId, text, time)
+        }
+    }
+
+    fun sendVoiceMessage(chatItemId: Int, filePath: String, durationMs: Long) {
+        viewModelScope.launch {
+            val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+            repo.insertMessage(
+                Message(
+                    chatItemId = chatItemId,
+                    isFromUser = true,
+                    time = time,
+                    type = MessageType.VOICE_MESSAGE,
+                    voiceFilePath = filePath,
+                    voiceDuration = durationMs
+                )
+            )
+            repo.updateLastMessage(chatItemId, "🎤 Message vocal", time)
         }
     }
 
     fun sendAnnouncement(chatItemId: Int, text: String) {
         viewModelScope.launch {
             val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-            repo.insertMessage(Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time, isAnnouncement = true))
+            repo.insertMessage(Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time, isAnnouncement = true, type = MessageType.TEXT))
+            repo.updateLastMessage(chatItemId, "📢 $text", time)
+        }
+    }
+
+    fun sendPoll(chatItemId: Int, question: String, options: List<String>) {
+        viewModelScope.launch {
+            val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+            repo.insertMessage(
+                Message(
+                    chatItemId = chatItemId,
+                    isFromUser = true,
+                    time = time,
+                    type = MessageType.POLL,
+                    pollQuestion = question,
+                    pollOptions = options,
+                    pollVotes = options.indices.associateWith { 0 }
+                )
+            )
+            repo.updateLastMessage(chatItemId, "📊 Sondage : $question", time)
+        }
+    }
+
+    fun votePoll(messageId: Int, optionIndex: Int) {
+        viewModelScope.launch {
+            val message = repo.getMessageById(messageId)
+            if (message != null && message.type == MessageType.POLL) {
+                val currentVotes = message.pollVotes?.toMutableMap() ?: mutableMapOf()
+                val count = currentVotes[optionIndex] ?: 0
+                currentVotes[optionIndex] = count + 1
+                repo.updateMessage(message.copy(pollVotes = currentVotes))
+            }
+        }
+    }
+
+    fun markAsRead(chatItemId: Int) {
+        viewModelScope.launch {
+            repo.markAsRead(chatItemId)
+        }
+    }
+
+    fun startOrGetConversation(recipientNames: List<String>, onResult: (ChatItem) -> Unit) {
+        viewModelScope.launch {
+            if (recipientNames.size == 1) {
+                val name = recipientNames[0]
+                val existing = repo.getConversationByName(name)
+                if (existing != null) {
+                    onResult(existing)
+                } else {
+                    val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+                    val newItem = ChatItem(id = 0, name = name, lastMessage = "Nouvelle discussion", time = time)
+                    val id = repo.insertConversation(newItem).toInt()
+                    onResult(newItem.copy(id = id))
+                }
+            } else {
+                // Create group
+                val name = recipientNames.joinToString(", ")
+                val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
+                val newItem = ChatItem(id = 0, name = name, lastMessage = "Groupe créé", time = time, isGroup = true)
+                val id = repo.insertConversation(newItem).toInt()
+                onResult(newItem.copy(id = id))
+            }
         }
     }
 
@@ -83,5 +170,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             Message(chatItemId = 1, text = "Oui, j'ai fini la partie UI du chat.", isFromUser = true, time = "10:05"),
             Message(chatItemId = 1, text = "Top ! Je m'occupe de la base de données alors.", isFromUser = false, time = "10:06")
         ).forEach { repo.insertMessage(it) }
+        
+        // Update previews for seeded data
+        repo.updateLastMessage(1, "Top ! Je m'occupe de la base de données alors.", "10:06")
     }
 }

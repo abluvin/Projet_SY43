@@ -21,13 +21,10 @@ import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.HowToVote
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
@@ -51,10 +48,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import android.Manifest
-import android.content.pm.PackageManager
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -64,23 +57,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.projet.R
 import com.example.projet.data.Poll
 import com.example.projet.data.PollOption
 import com.example.projet.data.Post
-import com.example.projet.data.VoiceMessage
 import com.example.projet.ui.utils.AudioRecorderManager
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -91,7 +80,7 @@ import java.util.Locale
 fun HomeScreen(
     modifier: Modifier = Modifier,
     username: String = "",
-    currentUserId: Int = 0,
+    currentUserId: Int = 1,
     isAdmin: Boolean = false,
     postVm: PostViewModel = viewModel(),
     onCreatePostClick: () -> Unit = {},
@@ -240,6 +229,9 @@ fun PostBloc(
     var playingVoiceId by remember { mutableStateOf<Int?>(null) }
     var playbackProgress by remember { mutableStateOf(0f) }
 
+    val likeCount by vm.getLikeCount(post.id).collectAsState(initial = 0)
+    val isLiked by vm.isLikedByUser(post.id, currentUserId).collectAsState(initial = false)
+
     LaunchedEffect(isPostAudioPlaying, playingVoiceId) {
         if (isPostAudioPlaying || playingVoiceId != null) {
             while (isPostAudioPlaying || playingVoiceId != null) {
@@ -364,10 +356,18 @@ fun PostBloc(
                 Column {
                     Row(
                         modifier = Modifier.padding(top = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Filled.Favorite, contentDescription = "Like", tint = Color.White)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { vm.toggleLike(post.id, currentUserId) }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Favorite,
+                                    contentDescription = "Like",
+                                    tint = if (isLiked) Color.Red else Color.White
+                                )
+                            }
+                            Text(text = "$likeCount", color = Color.White, fontSize = 14.sp)
                         }
                         IconButton(onClick = { showComments = !showComments }) {
                             Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Commentaires", tint = Color.White)

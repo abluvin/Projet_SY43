@@ -25,7 +25,15 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     init {
         val db = (application as ProjetApplication).database
         userRepo = UserRepository(db.userDao())
-        postRepo = PostRepository(db.postDao(), db.commentDao(), db.voiceMessageDao(), db.pollDao(), db.pollOptionDao(), db.pollVoteDao())
+        postRepo = PostRepository(
+            db.postDao(),
+            db.commentDao(),
+            db.voiceMessageDao(),
+            db.pollDao(),
+            db.pollOptionDao(),
+            db.pollVoteDao(),
+            db.likeDao()
+        )
         ueRepo = UERepository(db.ueDao(), db.userUEDao())
     }
 

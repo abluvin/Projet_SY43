@@ -9,6 +9,7 @@ import com.example.projet.data.repository.PostRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -19,7 +20,8 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         val db = (application as ProjetApplication).database
         repo = PostRepository(
             db.postDao(), db.commentDao(),
-            db.voiceMessageDao(), db.pollDao(), db.pollOptionDao(), db.pollVoteDao()
+            db.voiceMessageDao(), db.pollDao(), db.pollOptionDao(), db.pollVoteDao(),
+            db.likeDao()
         )
     }
 
@@ -77,6 +79,20 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             if (repo.getUserVote(optionId, userId) == null) {
                 repo.insertPollVote(PollVote(optionId = optionId, userId = userId, timestamp = System.currentTimeMillis()))
+            }
+        }
+    }
+
+    fun getLikeCount(postId: Int): Flow<Int> = repo.getLikeCount(postId)
+    fun isLikedByUser(postId: Int, userId: Int): Flow<Boolean> = repo.isLikedByUser(postId, userId)
+
+    fun toggleLike(postId: Int, userId: Int) {
+        viewModelScope.launch {
+            val liked = repo.isLikedByUser(postId, userId).first()
+            if (liked) {
+                repo.deleteLike(postId, userId)
+            } else {
+                repo.insertLike(Like(postId = postId, userId = userId))
             }
         }
     }

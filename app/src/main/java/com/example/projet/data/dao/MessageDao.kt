@@ -13,8 +13,14 @@ interface MessageDao {
     @Query("SELECT text FROM message WHERE chatItemId = :chatItemId ORDER BY id DESC LIMIT 1")
     fun getLastMessage(chatItemId: Int): Flow<String?>
 
+    @Query("SELECT * FROM message WHERE id = :id")
+    suspend fun getById(id: Int): Message?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(message: Message)
+
+    @Update
+    suspend fun update(message: Message)
 
     @Delete
     suspend fun delete(message: Message)

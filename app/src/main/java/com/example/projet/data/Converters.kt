@@ -43,4 +43,22 @@ class Converters {
     @TypeConverter
     fun toStringList(value: String?): List<String>? =
         value?.let { if (it.isEmpty()) emptyList() else it.split("|||") }
+
+    @TypeConverter
+    fun fromIntMap(map: Map<Int, Int>?): String? =
+        map?.entries?.joinToString("|||") { "${it.key}:::${it.value}" }
+
+    @TypeConverter
+    fun toIntMap(value: String?): Map<Int, Int>? =
+        value?.let {
+            if (it.isEmpty()) emptyMap()
+            else it.split("|||").associate { entry ->
+                val parts = entry.split(":::")
+                if (parts.size == 2) {
+                    parts[0].toInt() to parts[1].toInt()
+                } else {
+                    0 to 0
+                }
+            }
+        }
 }
