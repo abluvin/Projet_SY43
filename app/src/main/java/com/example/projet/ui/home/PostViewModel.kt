@@ -47,16 +47,38 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
 
     fun createVoicePost(filePath: String, duration: Long, userId: Int) {
         viewModelScope.launch {
-            val postId = repo.insert(Post(text = "Message vocal", idUser = userId, voiceFilePath = filePath, voiceDuration = duration))
+            val post = Post(text = "Message vocal", idUser = userId, voiceFilePath = filePath, voiceDuration = duration)
+            val postId = repo.insert(post)
+            post.id = postId.toInt()
+
             repo.insertVoiceMessage(VoiceMessage(postId = postId.toInt(), userId = userId, filePath = filePath, duration = duration))
+            
+            try {
+                firestoreRepo.createPost(post)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     fun createPostWithPollOptions(question: String, userId: Int, options: List<String>) {
         viewModelScope.launch {
-            val postId = repo.insert(Post(text = question, idUser = userId, isPoll = true))
-            val pollId = repo.insertPoll(Poll(postId = postId.toInt(), creatorId = userId, question = question))
+            val post = Post(text = question, idUser = userId, isPoll = true)
+            val postId = repo.insert(post)
+            post.id = postId.toInt()
+
+            val poll = Poll(postId = postId.toInt(), creatorId = userId, question = question)
+            val pollId = repo.insertPoll(poll)
+            poll.id = pollId.toInt()
+
             options.forEach { repo.insertPollOption(PollOption(pollId = pollId.toInt(), text = it)) }
+
+            try {
+                firestoreRepo.createPost(post)
+                firestoreRepo.createPoll(poll)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

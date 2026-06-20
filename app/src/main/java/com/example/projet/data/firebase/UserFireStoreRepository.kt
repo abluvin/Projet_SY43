@@ -8,9 +8,10 @@ class UserFireStoreRepository (
 
         private val collection = "users"
 
-        suspend fun createUser(user: User) {
-            firestore.add(collection, user.id.toString(), user)
-        }
+    suspend fun createUser(user: User) {
+        firestore.add(collection, user.id.toString(), user)
+    }
+
 
         suspend fun getUser(id: String): User? {
             return firestore.getById(collection, id, User::class.java)

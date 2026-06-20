@@ -1,14 +1,20 @@
 package com.example.projet.data.firebase
 
 import com.example.projet.data.Post
+import com.example.projet.data.Poll
 
 class PostFireStoreRepository(
     private val firestore: FireStoreRepository
 ) {
     private val collection = "posts"
+    private val pollCollection = "polls"
 
     suspend fun createPost(post: Post) {
         firestore.add(collection, post.id.toString(), post)
+    }
+
+    suspend fun createPoll(poll: Poll) {
+        firestore.add(pollCollection, poll.id.toString(), poll)
     }
 
     suspend fun getPosts(): List<Post> {

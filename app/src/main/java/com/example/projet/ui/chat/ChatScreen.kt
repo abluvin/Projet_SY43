@@ -85,7 +85,7 @@ fun ChatScreen(
     ) { padding ->
         Column(
             modifier = Modifier
-                .padding(padding)
+                .padding(top = padding.calculateTopPadding())
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {

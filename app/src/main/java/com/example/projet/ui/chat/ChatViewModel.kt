@@ -7,6 +7,8 @@ import com.example.projet.ProjetApplication
 import com.example.projet.data.ChatItem
 import com.example.projet.data.Message
 import com.example.projet.data.MessageType
+import com.example.projet.data.firebase.ChatFireStoreRepository
+import com.example.projet.data.firebase.FireStoreRepository
 import com.example.projet.data.repository.ChatRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -20,6 +22,8 @@ import java.time.format.DateTimeFormatter
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repo: ChatRepository
+    private val firestoreRepo = ChatFireStoreRepository(FireStoreRepository())
+    
     init {
         val db = (application as ProjetApplication).database
         repo = ChatRepository(db.chatItemDao(), db.messageDao())
@@ -40,29 +44,60 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     fun sendMessage(chatItemId: Int, text: String) {
         viewModelScope.launch {
             val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-            repo.insertMessage(Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time))
+            val message = Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time)
+            
+            // 1. Room
+            val id = repo.insertMessage(message)
+            val updatedMsg = message.copy(id = id.toInt())
+            
+            // 2. Firestore
+            try {
+                firestoreRepo.sendMessage(updatedMsg)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     fun sendAnnouncement(chatItemId: Int, text: String) {
         viewModelScope.launch {
             val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-            repo.insertMessage(Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time, isAnnouncement = true))
+            val message = Message(chatItemId = chatItemId, text = text, isFromUser = true, time = time, isAnnouncement = true)
+            
+            // 1. Room
+            val id = repo.insertMessage(message)
+            val updatedMsg = message.copy(id = id.toInt())
+            
+            // 2. Firestore
+            try {
+                firestoreRepo.sendMessage(updatedMsg)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
     fun createCourseHub(name: String, profName: String) {
         viewModelScope.launch {
             val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))
-            repo.insertConversation(
-                ChatItem(
-                    id = 0,
-                    name = name,
-                    lastMessage = "Hub créé par $profName",
-                    time = time,
-                    isCourse = true
-                )
+            val chatItem = ChatItem(
+                id = 0,
+                name = name,
+                lastMessage = "Hub créé par $profName",
+                time = time,
+                isCourse = true
             )
+            
+            // 1. Room
+            val id = repo.insertConversation(chatItem)
+            val updatedChatItem = chatItem.copy(id = id.toInt())
+            
+            // 2. Firestore
+            try {
+                firestoreRepo.createConversation(updatedChatItem)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

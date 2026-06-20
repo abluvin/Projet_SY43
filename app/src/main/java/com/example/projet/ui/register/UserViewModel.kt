@@ -1,11 +1,14 @@
 package com.example.projet.ui.Register
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.projet.ProjetApplication
 import com.example.projet.data.PasswordUtils
 import com.example.projet.data.User
+import com.example.projet.data.firebase.FireStoreRepository
+import com.example.projet.data.firebase.UserFireStoreRepository
 import com.example.projet.data.repository.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +20,7 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
     private val repo = UserRepository(
         (application as ProjetApplication).database.userDao()
     )
+    private val firestoreRepo = UserFireStoreRepository(FireStoreRepository())
 
     sealed class RegisterState {
         object Idle : RegisterState()
@@ -50,8 +54,30 @@ class UserViewModel(application: Application) : AndroidViewModel(application) {
             }
             val role = if (accessCode.contains("PROF", ignoreCase = true)) "PROFESSOR" else "STUDENT"
             val isAdmin = accessCode.contains("ADMIN", ignoreCase = true)
-            val id = repo.insert(User(name = name, email = email, password = PasswordUtils.hash(password), isAdmin = isAdmin, role = role))
-            _registerState.value = RegisterState.Success(name, id.toInt(), isAdmin, role)
+            
+            val user = User(
+                name = name, 
+                email = email, 
+                password = PasswordUtils.hash(password), 
+                isAdmin = isAdmin, 
+                role = role
+            )
+
+            // 1. Sauvegarde dans Room
+            val id = repo.insert(user)
+            user.id = id.toInt()
+
+            // 2. Sauvegarde synchronisée dans Firestore
+            try {
+                Log.d("FirestoreSync", "Tentative d'envoi vers Firestore pour l'utilisateur: ${user.name}")
+                firestoreRepo.createUser(user)
+                Log.d("FirestoreSync", "Utilisateur envoyé avec succès sur Firestore")
+            } catch (e: Exception) {
+                Log.e("FirestoreSync", "Erreur lors de l'envoi vers Firestore: ${e.message}", e)
+                e.printStackTrace()
+            }
+
+            _registerState.value = RegisterState.Success(name, user.id, isAdmin, role)
         }
     }
 

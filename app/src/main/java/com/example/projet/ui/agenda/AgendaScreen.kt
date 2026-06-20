@@ -75,8 +75,7 @@ fun AgendaScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentPadding = PaddingValues(bottom = if (isPrivileged) 88.dp else 0.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
 
         // Header section

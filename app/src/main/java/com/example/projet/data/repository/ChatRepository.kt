@@ -15,7 +15,7 @@ class ChatRepository(
 
     fun getChatItem(id: Int): Flow<ChatItem?> = chatItemDao.getById(id)
 
-    suspend fun insertConversation(chatItem: ChatItem) = chatItemDao.insert(chatItem)
+    suspend fun insertConversation(chatItem: ChatItem): Long = chatItemDao.insert(chatItem)
 
     suspend fun updateConversation(chatItem: ChatItem) = chatItemDao.update(chatItem)
 
@@ -25,7 +25,7 @@ class ChatRepository(
 
     fun getLastMessage(chatItemId: Int): Flow<String?> = messageDao.getLastMessage(chatItemId)
 
-    suspend fun insertMessage(message: Message) = messageDao.insert(message)
+    suspend fun insertMessage(message: Message): Long = messageDao.insert(message)
 
     suspend fun deleteMessage(message: Message) = messageDao.delete(message)
 
