@@ -47,6 +47,8 @@ fun ConversationScreen(
     val context = LocalContext.current
     val chatItem by vm.getChatItem(chatItemId).collectAsState(initial = null)
     val item = chatItem ?: return
+    val directChatName by vm.getDirectChatName(chatItemId).collectAsState(initial = null)
+    val displayName = if (!item.isGroup && !item.isCourse) directChatName ?: item.name else item.name
     val messages by vm.getMessages(chatItemId).collectAsState(initial = emptyList())
     val listState = rememberLazyListState()
 
@@ -144,7 +146,7 @@ fun ConversationScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text(item.name, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(displayName, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         if (item.hasOnlineStatus) {
                             Text("En ligne", fontSize = 12.sp, color = Color(0xFF34A853))
                         } else if (item.isGroup) {

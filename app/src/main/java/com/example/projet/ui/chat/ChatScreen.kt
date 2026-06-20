@@ -112,15 +112,19 @@ fun ChatScreen(
             ) {
                 items(filteredItems) { item ->
                     val lastMsg by vm.getLastMessage(item.id).collectAsState(initial = item.lastMessage)
+                    val directName by vm.getDirectChatName(item.id).collectAsState(initial = null)
+                    val displayItem = if (!item.isGroup && !item.isCourse && directName != null)
+                        item.copy(name = directName!!)
+                    else item
                     if (item.isCourse) {
                         CourseHubCard(
-                            item = item,
+                            item = displayItem,
                             lastMessage = lastMsg ?: item.lastMessage,
                             onClick = { onConversationClick(item) }
                         )
                     } else {
                         ChatListItem(
-                            item = item,
+                            item = displayItem,
                             lastMessage = lastMsg ?: item.lastMessage,
                             onClick = { onConversationClick(item) }
                         )
