@@ -18,6 +18,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -183,23 +190,25 @@ fun ConversationScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(vertical = 16.dp)
             ) {
-                items(messages) { message ->
+                items(messages, key = { it.id }) { message ->
                     val isFromUser = message.senderId != 0 && message.senderId == currentUserId
                     val senderName = if (item.isGroup && !isFromUser) usersById[message.senderId] else null
-                    when (message.messageType) {
-                        MessageType.VOICE_MESSAGE -> AudioMessageBubble(message, currentUserId, senderName)
-                        MessageType.POLL -> {
-                            if (message.pollId != null) {
-                                PollBubble(
-                                    message = message,
-                                    pollId = message.pollId,
-                                    currentUserId = currentUserId,
-                                    vm = vm,
-                                    senderName = senderName
-                                )
-                            } else MessageBubble(message, currentUserId, senderName)
+                    Box(modifier = Modifier.animateItem()) {
+                        when (message.messageType) {
+                            MessageType.VOICE_MESSAGE -> AudioMessageBubble(message, currentUserId, senderName)
+                            MessageType.POLL -> {
+                                if (message.pollId != null) {
+                                    PollBubble(
+                                        message = message,
+                                        pollId = message.pollId,
+                                        currentUserId = currentUserId,
+                                        vm = vm,
+                                        senderName = senderName
+                                    )
+                                } else MessageBubble(message, currentUserId, senderName)
+                            }
+                            else -> MessageBubble(message, currentUserId, senderName)
                         }
-                        else -> MessageBubble(message, currentUserId, senderName)
                     }
                 }
             }
@@ -291,16 +300,25 @@ private fun TextInputBar(
             )
         )
         Spacer(Modifier.width(4.dp))
-        if (text.isBlank()) {
-            IconButton(onClick = onMic) {
-                Icon(Icons.Default.Mic, contentDescription = "Enregistrer", tint = Color.Gray)
-            }
-        } else {
-            IconButton(
-                onClick = onSend,
-                colors = IconButtonDefaults.iconButtonColors(contentColor = utbmBlue)
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Envoyer")
+        AnimatedContent(
+            targetState = text.isBlank(),
+            transitionSpec = {
+                (scaleIn(tween(160), initialScale = 0.72f) + fadeIn(tween(160))) togetherWith
+                (scaleOut(tween(120), targetScale = 0.72f) + fadeOut(tween(120)))
+            },
+            label = "send_mic_toggle"
+        ) { isBlank ->
+            if (isBlank) {
+                IconButton(onClick = onMic) {
+                    Icon(Icons.Default.Mic, contentDescription = "Enregistrer", tint = Color.Gray)
+                }
+            } else {
+                IconButton(
+                    onClick = onSend,
+                    colors = IconButtonDefaults.iconButtonColors(contentColor = utbmBlue)
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Envoyer")
+                }
             }
         }
     }

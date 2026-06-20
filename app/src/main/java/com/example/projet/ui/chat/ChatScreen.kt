@@ -1,5 +1,6 @@
 package com.example.projet.ui.chat
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -110,24 +111,26 @@ fun ChatScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                items(filteredItems) { item ->
+                items(filteredItems, key = { it.id }) { item ->
                     val lastMsg by vm.getLastMessage(item.id).collectAsState(initial = item.lastMessage)
                     val directName by vm.getDirectChatName(item.id).collectAsState(initial = null)
                     val displayItem = if (!item.isGroup && !item.isCourse && directName != null)
                         item.copy(name = directName!!)
                     else item
-                    if (item.isCourse) {
-                        CourseHubCard(
-                            item = displayItem,
-                            lastMessage = lastMsg ?: item.lastMessage,
-                            onClick = { onConversationClick(item) }
-                        )
-                    } else {
-                        ChatListItem(
-                            item = displayItem,
-                            lastMessage = lastMsg ?: item.lastMessage,
-                            onClick = { onConversationClick(item) }
-                        )
+                    Box(modifier = Modifier.animateItem(tween(300))) {
+                        if (item.isCourse) {
+                            CourseHubCard(
+                                item = displayItem,
+                                lastMessage = lastMsg ?: item.lastMessage,
+                                onClick = { onConversationClick(item) }
+                            )
+                        } else {
+                            ChatListItem(
+                                item = displayItem,
+                                lastMessage = lastMsg ?: item.lastMessage,
+                                onClick = { onConversationClick(item) }
+                            )
+                        }
                     }
                 }
             }
