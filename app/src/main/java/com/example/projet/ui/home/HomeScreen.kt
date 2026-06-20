@@ -46,11 +46,23 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.draw.scale
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -222,15 +234,29 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                posts.forEach { post ->
-                    PostBloc(
-                        post = post,
-                        vm = postVm,
-                        currentUserId = currentUserId,
-                        isAdmin = isAdmin,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                posts.forEachIndexed { index, post ->
+                    var visible by remember(post.id) { mutableStateOf(false) }
+                    LaunchedEffect(post.id) {
+                        kotlinx.coroutines.delay(minOf(index * 70L, 280L))
+                        visible = true
+                    }
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(tween(350)) + slideInVertically(
+                            tween(400, easing = LinearOutSlowInEasing)
+                        ) { it / 5 }
+                    ) {
+                        Column {
+                            PostBloc(
+                                post = post,
+                                vm = postVm,
+                                currentUserId = currentUserId,
+                                isAdmin = isAdmin,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+                    }
                 }
             }
         }
@@ -272,6 +298,16 @@ fun PostBloc(
     val comments by commentsFlow.collectAsState(initial = emptyList())
     val likeCount by remember(post.id) { vm.getLikeCount(post.id) }.collectAsState(initial = 0)
     val hasLiked by remember(post.id) { vm.hasUserLiked(post.id, currentUserId) }.collectAsState(initial = false)
+    val likeScale by animateFloatAsState(
+        targetValue = if (hasLiked) 1.3f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "like_scale"
+    )
+    val likeColor by animateColorAsState(
+        targetValue = if (hasLiked) Color(0xFFE53935) else Color.White,
+        animationSpec = tween(200),
+        label = "like_color"
+    )
     val pollsFlow = remember(post.id) { vm.getPolls(post.id) }
     val polls by pollsFlow.collectAsState(initial = emptyList())
     val voiceMessagesFlow = remember(post.id) { vm.getVoiceMessages(post.id) }
@@ -385,16 +421,26 @@ fun PostBloc(
                                 Icon(
                                     Icons.Filled.Favorite,
                                     contentDescription = "Like",
-                                    tint = if (hasLiked) Color(0xFFE53935) else Color.White
+                                    tint = likeColor,
+                                    modifier = Modifier.scale(likeScale)
                                 )
                             }
-                            if (likeCount > 0) {
-                                Text(
-                                    text = likeCount.toString(),
-                                    color = Color(0xFFE53935),
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                            AnimatedContent(
+                                targetState = likeCount,
+                                transitionSpec = {
+                                    (slideInVertically { -it } + fadeIn(tween(200))) togetherWith
+                                    (slideOutVertically { it } + fadeOut(tween(150)))
+                                },
+                                label = "like_count"
+                            ) { count ->
+                                if (count > 0) {
+                                    Text(
+                                        text = count.toString(),
+                                        color = Color(0xFFE53935),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                         IconButton(onClick = { showComments = !showComments }) {

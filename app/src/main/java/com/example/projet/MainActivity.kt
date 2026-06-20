@@ -6,6 +6,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -402,7 +407,11 @@ fun MainApp(
                 startDestination = Routes.HOME,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                composable(Routes.HOME) {
+                composable(
+                    Routes.HOME,
+                    enterTransition = { fadeIn(tween(220)) },
+                    exitTransition = { fadeOut(tween(180)) }
+                ) {
                     HomeScreen(
                         username = username,
                         currentUserId = userId,
@@ -413,7 +422,11 @@ fun MainApp(
                         onProfileClick = { navController.navigate(Routes.PROFILE) }
                     )
                 }
-                composable(Routes.AGENDA) {
+                composable(
+                    Routes.AGENDA,
+                    enterTransition = { fadeIn(tween(220)) },
+                    exitTransition = { fadeOut(tween(180)) }
+                ) {
                     AgendaScreen(
                         onCameraClick = { showCamera = true },
                         onPasteClick = { showPasteDialog = true },
@@ -423,7 +436,11 @@ fun MainApp(
                         vm = agendaVM
                     )
                 }
-                composable(Routes.CHAT) {
+                composable(
+                    Routes.CHAT,
+                    enterTransition = { fadeIn(tween(220)) },
+                    exitTransition = { fadeOut(tween(180)) }
+                ) {
                     ChatScreen(
                         onConversationClick = { chatItem ->
                             if (chatItem.isCourse) {
@@ -439,20 +456,38 @@ fun MainApp(
                         vm = chatVM
                     )
                 }
-                composable(Routes.GROUPS) {
+                composable(
+                    Routes.GROUPS,
+                    enterTransition = { fadeIn(tween(220)) },
+                    exitTransition = { fadeOut(tween(180)) }
+                ) {
                     CollaborationScreen(
                         username = username,
                         userId = collaborationUserId,
                         vm = collaborationVM
                     )
                 }
-                composable(Routes.MENU) {
+                composable(
+                    Routes.MENU,
+                    enterTransition = { fadeIn(tween(220)) },
+                    exitTransition = { fadeOut(tween(180)) }
+                ) {
                     MenuScreen()
                 }
-                composable(Routes.ADMIN) {
+                composable(
+                    Routes.ADMIN,
+                    enterTransition = { fadeIn(tween(220)) },
+                    exitTransition = { fadeOut(tween(180)) }
+                ) {
                     AdminScreen(currentUserId = userId, vm = adminVM)
                 }
-                composable(Routes.SETTINGS) {
+                composable(
+                    Routes.SETTINGS,
+                    enterTransition = { slideInHorizontally(tween(300)) { it } + fadeIn(tween(300)) },
+                    exitTransition = { slideOutHorizontally(tween(300)) { -it / 4 } + fadeOut(tween(220)) },
+                    popEnterTransition = { slideInHorizontally(tween(300)) { -it / 4 } + fadeIn(tween(300)) },
+                    popExitTransition = { slideOutHorizontally(tween(300)) { it } + fadeOut(tween(220)) }
+                ) {
                     SettingsScreen(
                         isDarkTheme = isDarkTheme,
                         onToggleDarkTheme = onToggleDarkTheme,
@@ -460,13 +495,25 @@ fun MainApp(
                         onLogout = onLogout
                     )
                 }
-                composable(Routes.PROFILE) {
+                composable(
+                    Routes.PROFILE,
+                    enterTransition = { slideInHorizontally(tween(300)) { it } + fadeIn(tween(300)) },
+                    exitTransition = { slideOutHorizontally(tween(300)) { -it / 4 } + fadeOut(tween(220)) },
+                    popEnterTransition = { slideInHorizontally(tween(300)) { -it / 4 } + fadeIn(tween(300)) },
+                    popExitTransition = { slideOutHorizontally(tween(300)) { it } + fadeOut(tween(220)) }
+                ) {
                     ProfileScreen(
                         userId = userId,
                         onBack = { navController.popBackStack() }
                     )
                 }
-                composable(Routes.CREATE_POST) {
+                composable(
+                    Routes.CREATE_POST,
+                    enterTransition = { slideInHorizontally(tween(300)) { it } + fadeIn(tween(300)) },
+                    exitTransition = { slideOutHorizontally(tween(300)) { -it / 4 } + fadeOut(tween(220)) },
+                    popEnterTransition = { slideInHorizontally(tween(300)) { -it / 4 } + fadeIn(tween(300)) },
+                    popExitTransition = { slideOutHorizontally(tween(300)) { it } + fadeOut(tween(220)) }
+                ) {
                     CreatePostScreen(
                         isProf = isProf,
                         userUECodes = postUserUECodes,
@@ -488,7 +535,11 @@ fun MainApp(
                 }
                 composable(
                     route = Routes.CONVERSATION,
-                    arguments = listOf(navArgument("chatItemId") { type = NavType.IntType })
+                    arguments = listOf(navArgument("chatItemId") { type = NavType.IntType }),
+                    enterTransition = { slideInHorizontally(tween(300)) { it } + fadeIn(tween(300)) },
+                    exitTransition = { slideOutHorizontally(tween(300)) { -it / 4 } + fadeOut(tween(220)) },
+                    popEnterTransition = { slideInHorizontally(tween(300)) { -it / 4 } + fadeIn(tween(300)) },
+                    popExitTransition = { slideOutHorizontally(tween(300)) { it } + fadeOut(tween(220)) }
                 ) { backStackEntry ->
                     val chatItemId = backStackEntry.arguments?.getInt("chatItemId") ?: return@composable
                     ConversationScreen(
@@ -500,7 +551,11 @@ fun MainApp(
                 }
                 composable(
                     route = Routes.COURSE_HUB,
-                    arguments = listOf(navArgument("chatItemId") { type = NavType.IntType })
+                    arguments = listOf(navArgument("chatItemId") { type = NavType.IntType }),
+                    enterTransition = { slideInHorizontally(tween(300)) { it } + fadeIn(tween(300)) },
+                    exitTransition = { slideOutHorizontally(tween(300)) { -it / 4 } + fadeOut(tween(220)) },
+                    popEnterTransition = { slideInHorizontally(tween(300)) { -it / 4 } + fadeIn(tween(300)) },
+                    popExitTransition = { slideOutHorizontally(tween(300)) { it } + fadeOut(tween(220)) }
                 ) { backStackEntry ->
                     val chatItemId = backStackEntry.arguments?.getInt("chatItemId") ?: return@composable
                     CourseScreen(
