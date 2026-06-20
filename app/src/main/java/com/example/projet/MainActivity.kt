@@ -43,6 +43,7 @@ import com.example.projet.ui.camera.CameraScreen
 import com.example.projet.ui.Register.Connexion
 import com.example.projet.ui.Register.Register
 import com.example.projet.ui.chat.ChatScreen
+import com.example.projet.ui.chat.ChatViewModel
 import com.example.projet.ui.chat.ConversationScreen
 import com.example.projet.ui.chat.CourseScreen
 import com.example.projet.ui.chat.NewChatDialog
@@ -365,7 +366,15 @@ fun MainApp(
     val collaborationVM: CollaborationViewModel = viewModel()
     val postVM: PostViewModel = viewModel()
     val adminVM: AdminViewModel = viewModel()
+    val chatVM: ChatViewModel = viewModel()
+
+    LaunchedEffect(userId) {
+        if (userId != 0) chatVM.initUser(userId)
+    }
     val collaborationUserId = "user_${username.lowercase().replace(" ", "_")}"
+
+    val postUserUECodes by postVM.userUECodes.collectAsState()
+    val postUserBranch by postVM.userBranch.collectAsState()
 
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -454,7 +463,8 @@ fun MainApp(
                         onCourseHubClick = { navController.navigate(Routes.courseHub(6)) },
                         onNewChatClick = { showNewChatDialog = true },
                         isProf = isProf,
-                        profName = username
+                        profName = username,
+                        vm = chatVM
                     )
                 }
                 composable(Routes.GROUPS) {
@@ -487,16 +497,18 @@ fun MainApp(
                 composable(Routes.CREATE_POST) {
                     CreatePostScreen(
                         isProf = isProf,
-                        onPostCreated = { text, uri, ue ->
-                            postVM.createPost(text, uri?.toString(), userId, ue)
+                        userUECodes = postUserUECodes,
+                        userBranch = postUserBranch,
+                        onPostCreated = { text, uri, ue, branch ->
+                            postVM.createPost(text, uri?.toString(), userId, ue, branch)
                             navController.popBackStack()
                         },
-                        onVoicePostCreated = { filePath, duration ->
-                            postVM.createVoicePost(filePath, duration, userId)
+                        onVoicePostCreated = { filePath, duration, ue, branch ->
+                            postVM.createVoicePost(filePath, duration, userId, ue, branch)
                             navController.popBackStack()
                         },
-                        onPollCreated = { question, options ->
-                            postVM.createPostWithPollOptions(question, userId, options)
+                        onPollCreated = { question, options, ue, branch ->
+                            postVM.createPostWithPollOptions(question, userId, options, ue, branch)
                             navController.popBackStack()
                         },
                         onBack = { navController.popBackStack() }
@@ -509,7 +521,9 @@ fun MainApp(
                     val chatItemId = backStackEntry.arguments?.getInt("chatItemId") ?: return@composable
                     ConversationScreen(
                         chatItemId = chatItemId,
-                        onBack = { navController.popBackStack() }
+                        currentUserId = userId,
+                        onBack = { navController.popBackStack() },
+                        vm = chatVM
                     )
                 }
                 composable(
@@ -520,22 +534,33 @@ fun MainApp(
                     CourseScreen(
                         chatItemId = chatItemId,
                         isProf = isProf,
-                        onBack = { navController.popBackStack() }
+                        currentUserId = userId,
+                        onBack = { navController.popBackStack() },
+                        vm = chatVM
                     )
                 }
             }
         }
 
         if (showNewChatDialog) {
+            val allUsers by chatVM.allUsers.collectAsState()
             NewChatDialog(
+                allUsers = allUsers,
+                currentUserId = userId,
                 onDismiss = { showNewChatDialog = false },
-                onConfirm = { recipients ->
+                onStartDirectChat = { user ->
                     showNewChatDialog = false
-                    // Logic to start chat or group
-                    if (recipients.size >= 2) {
-                        // Create group logic
-                    } else if (recipients.isNotEmpty()) {
-                        // Start direct chat logic
+                    chatVM.createDirectConversation(user.name, listOf(userId, user.id)) { id ->
+                        navController.navigate(Routes.conversation(id))
+                    }
+                },
+                onCreateGroup = { users ->
+                    showNewChatDialog = false
+                    chatVM.createGroupConversation(
+                        users.map { it.name },
+                        users.map { it.id } + userId
+                    ) { id ->
+                        navController.navigate(Routes.conversation(id))
                     }
                 }
             )
