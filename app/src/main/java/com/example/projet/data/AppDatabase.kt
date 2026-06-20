@@ -22,9 +22,11 @@ import com.example.projet.data.dao.*
         VoiceMessage::class,
         Poll::class,
         PollOption::class,
-        PollVote::class
+        PollVote::class,
+        UE::class,
+        UserUE::class
     ],
-    version = 7,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -42,6 +44,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pollDao(): PollDao
     abstract fun pollOptionDao(): PollOptionDao
     abstract fun pollVoteDao(): PollVoteDao
+    abstract fun ueDao(): UEDao
+    abstract fun userUEDao(): UserUEDao
 
     companion object {
         @Volatile
@@ -80,7 +84,6 @@ abstract class AppDatabase : RoomDatabase() {
 
         private val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // Recreate user table: drop isProf (never persisted), add role
                 database.execSQL("""
                     CREATE TABLE IF NOT EXISTS user_new (
                         `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -131,16 +134,135 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE event ADD COLUMN targetUECodes TEXT NOT NULL DEFAULT ''")
+                database.execSQL("ALTER TABLE event ADD COLUMN targetBranches TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE event ADD COLUMN isGlobal INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE user ADD COLUMN branch TEXT NOT NULL DEFAULT ''")
+                // Ajout de branch sur ue si la migration 7→8 l'avait créée sans ce champ
+                try {
+                    database.execSQL("ALTER TABLE ue ADD COLUMN branch TEXT NOT NULL DEFAULT 'Transversal'")
+                    database.execSQL("UPDATE ue SET branch = 'Info' WHERE code IN ('HM40','IT41','IT44','IT45','RE46','RS40','SI40','PA5A','SY43','WE4A','WE4B')")
+                } catch (_: android.database.sqlite.SQLiteException) {
+                    // colonne déjà présente, rien à faire
+                }
+                seedUEs(database)
+            }
+        }
+
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `ue` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `code` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `branch` TEXT NOT NULL DEFAULT 'Transversal'
+                    )
+                """.trimIndent())
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `user_ue` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `userId` INTEGER NOT NULL,
+                        `ueId` INTEGER NOT NULL,
+                        `enseigne` INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY(`userId`) REFERENCES `user`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`ueId`) REFERENCES `ue`(`id`) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_user_ue_userId` ON `user_ue` (`userId`)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_user_ue_ueId` ON `user_ue` (`ueId`)")
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_user_ue_userId_ueId` ON `user_ue` (`userId`, `ueId`)")
+                seedUEs(database)
+            }
+        }
+
+        private fun seedUEs(database: SupportSQLiteDatabase) {
+            // Triple : (code, name, branch)  branch = "Info" | "Méca" | "Industrie" | "Méca Ergo" | "Énergie" | "Transversal"
+            val ues = listOf(
+                Triple("AM02", "Pratique et création artistique", "Transversal"),
+                Triple("CC01", "Comportement culturel et relations humaines au niveau international", "Transversal"),
+                Triple("CC04", "British studies", "Transversal"),
+                Triple("CC05", "Conscience interculturelle : se forger un mindset global", "Transversal"),
+                Triple("CI02", "Maîtriser son identité scientifique", "Transversal"),
+                Triple("EC1E", "Fundamentals of economics for the engineer", "Transversal"),
+                Triple("EC1F", "Fondements de l''économie pour l''ingénieur", "Transversal"),
+                Triple("EE01", "Europe", "Transversal"),
+                Triple("EI02", "The Rest of the English-Speaking World", "Transversal"),
+                Triple("EI03", "International Security and Global Challenges", "Transversal"),
+                Triple("ESP4", "Tutored project", "Transversal"),
+                Triple("ESP5", "Tutored Project", "Transversal"),
+                Triple("EV01", "Imaginer et concevoir les nouvelles mobilités", "Transversal"),
+                Triple("GE01", "Fondements de la gestion", "Transversal"),
+                Triple("GE06", "Fondements du marketing", "Transversal"),
+                Triple("GE08", "Contrôle de gestion", "Transversal"),
+                Triple("GE41", "Technologie et management de l''innovation", "Transversal"),
+                Triple("GE50", "Mise en oeuvre des opérations internationales", "Transversal"),
+                Triple("GS01", "Etudes de genre", "Transversal"),
+                Triple("HE09", "Histoire des sciences et du monde scientifique", "Transversal"),
+                Triple("HM40", "Interface Homme Machine", "Info"),
+                Triple("HN01", "Techn''hom Time Machine : outils et méthodes", "Transversal"),
+                Triple("HN2A", "Techn''hom Time Machine : projet (QC)", "Transversal"),
+                Triple("HN2B", "Techn''hom Time Machine : projet (OM)", "Transversal"),
+                Triple("HT01", "Initiation à l''histoire des techniques", "Transversal"),
+                Triple("IT41", "Classical and Quantum Algorithms", "Info"),
+                Triple("IT44", "Analyse numérique", "Info"),
+                Triple("IT45", "Optimisation et recherche opérationnelle", "Info"),
+                Triple("LF74", "Français pour ingénieurs niveau B2 et entraînement TCF", "Transversal"),
+                Triple("MD40", "Organiser des évènements scientifiques et/ou pédagogiques autour d''enjeux sociétaux", "Transversal"),
+                Triple("MG04", "Management de l''environnement", "Transversal"),
+                Triple("MG13", "Management des hommes et de la production", "Transversal"),
+                Triple("MG6P", "Les brevets au service de l''ingénieur - Projet", "Transversal"),
+                Triple("MG6T", "Les brevets au service de l''ingénieur - Théorie", "Transversal"),
+                Triple("MR01", "Méthodologie de recherche (à distance)", "Transversal"),
+                Triple("MR52", "Initiation à la recherche en sciences humaines et sociales (FISE-INFO)", "Transversal"),
+                Triple("PA0A", "S''engager au service d''une communauté, d''individus", "Transversal"),
+                Triple("PA5A", "Transmettre et partager les connaissances scientifiques", "Info"),
+                Triple("PE01", "Projet entrepreneurial", "Transversal"),
+                Triple("RE46", "Réseaux locaux", "Info"),
+                Triple("RS40", "Réseaux et Cybersécurité niveau 1", "Info"),
+                Triple("SI02", "Sémiologie de l''image et du son", "Transversal"),
+                Triple("SI40", "Systèmes d''information", "Info"),
+                Triple("SO01", "Sociologie du travail", "Transversal"),
+                Triple("SO03", "La transition par les sciences sociales", "Transversal"),
+                Triple("SO04", "Anthropologie et sociologie des techniques", "Transversal"),
+                Triple("SO07", "Sociologie des organisations", "Transversal"),
+                Triple("SO09", "Santé et sécurité au travail", "Transversal"),
+                Triple("SP03", "Entraînement et performances", "Transversal"),
+                Triple("SP07", "Education physique et sportive option entretien physique", "Transversal"),
+                Triple("SY43", "Android development", "Info"),
+                Triple("TI05", "Communication globale du manager", "Transversal"),
+                Triple("TI09", "Communication orale en groupe", "Transversal"),
+                Triple("WE4A", "Technologies et programmation WEB", "Info"),
+                Triple("WE4B", "Technologies WEB avancées", "Info")
+            )
+            ues.forEach { (code, name, branch) ->
+                database.execSQL("INSERT OR IGNORE INTO ue (code, name, branch) VALUES ('$code', '$name', '$branch')")
+            }
+        }
+
         private val SEED_CALLBACK = object : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
                 val profPassword = PasswordUtils.hash("prof123")
                 val adminPassword = PasswordUtils.hash("admin123")
                 db.execSQL(
-                    "INSERT INTO user (name, email, password, isAdmin, role) VALUES " +
-                    "('Professeur Demo', 'prof.demo@utbm.fr', '$profPassword', 0, 'PROFESSOR')," +
-                    "('Admin Demo', 'admin.demo@utbm.fr', '$adminPassword', 1, 'STUDENT')"
+                    "INSERT INTO user (name, email, password, isAdmin, role, branch) VALUES " +
+                    "('Professeur Demo', 'prof.demo@utbm.fr', '$profPassword', 0, 'PROFESSOR', '')," +
+                    "('Admin Demo', 'admin.demo@utbm.fr', '$adminPassword', 1, 'STUDENT', '')"
                 )
+                seedUEs(db)
             }
         }
 
@@ -151,8 +273,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "app_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                     .addCallback(SEED_CALLBACK)
+                    .fallbackToDestructiveMigration()
                     .build().also { INSTANCE = it }
             }
         }

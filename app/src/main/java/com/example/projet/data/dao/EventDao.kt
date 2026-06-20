@@ -13,6 +13,9 @@ interface EventDao {
     @Query("SELECT * FROM event WHERE date = :date ORDER BY startTime")
     fun getByDate(date: String): Flow<List<Event>>
 
+    @Query("SELECT * FROM event WHERE date >= :startDate AND date <= :endDate ORDER BY date, startTime")
+    fun getByDateRange(startDate: String, endDate: String): Flow<List<Event>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(event: Event)
 

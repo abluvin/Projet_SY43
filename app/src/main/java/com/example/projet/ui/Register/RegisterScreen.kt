@@ -2,6 +2,7 @@ package com.example.projet.ui.Register
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,7 +59,6 @@ fun Register(
     onNavigateToLogin: () -> Unit = {}
 ) {
     val utbmBlue = Color(0xFF0055A4)
-    val backgroundColor = Color(0xFFF8F9FA)
 
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -81,15 +81,20 @@ fun Register(
         }
     }
 
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Spacer(modifier = Modifier.height(40.dp))
+        item {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Spacer(modifier = Modifier.height(40.dp))
 
         UtbmLogo(iconSize = 56.dp)
 
@@ -232,5 +237,7 @@ fun Register(
             modifier = Modifier.clickable { onNavigateToLogin() }
 //             modifier = Modifier.clickable { onNavigateToLogin() }.testTag("go_to_login")
         )
+            }
+        }
     }
 }

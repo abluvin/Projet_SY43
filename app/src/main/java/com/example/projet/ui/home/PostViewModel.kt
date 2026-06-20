@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.projet.ProjetApplication
 import com.example.projet.data.*
+import com.example.projet.data.firebase.FireStoreRepository
+import com.example.projet.data.firebase.PostFireStoreRepository
 import com.example.projet.data.repository.PostRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,12 +17,15 @@ import kotlinx.coroutines.launch
 class PostViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repo: PostRepository
+    private val firestoreRepo: PostFireStoreRepository
+
     init {
         val db = (application as ProjetApplication).database
         repo = PostRepository(
             db.postDao(), db.commentDao(),
             db.voiceMessageDao(), db.pollDao(), db.pollOptionDao(), db.pollVoteDao()
         )
+        firestoreRepo = PostFireStoreRepository(FireStoreRepository())
     }
 
     val posts: StateFlow<List<Post>> = repo.getAll()
@@ -28,7 +33,15 @@ class PostViewModel(application: Application) : AndroidViewModel(application) {
 
     fun createPost(text: String, imageUrl: String?, userId: Int = 1, ue: String? = null) {
         viewModelScope.launch {
-            repo.insert(Post(text = text, idUser = userId, imageUrl = imageUrl, ue = ue))
+            val post = Post(text = text, idUser = userId, imageUrl = imageUrl, ue = ue)
+            val id = repo.insert(post)
+            post.id = id.toInt()
+            // Optionnel : sauvegarde aussi sur Firestore
+            try {
+                firestoreRepo.createPost(post)
+            } catch (e: Exception) {
+                // Gérer l'erreur Firestore sans impacter Room
+            }
         }
     }
 

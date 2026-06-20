@@ -31,7 +31,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.projet.data.ScheduleParser
+import com.example.projet.ui.profile.ProfileViewModel
 import com.example.projet.ui.agenda.AgendaScreen
 import com.example.projet.ui.agenda.AgendaViewModel
 import com.example.projet.ui.camera.CameraScreen
@@ -51,6 +56,9 @@ import com.example.projet.ui.sessions.CollaborationViewModel
 import com.example.projet.ui.profile.ProfileScreen
 import com.example.projet.ui.settings.SettingsScreen
 import com.example.projet.ui.theme.ProjetTheme
+import com.example.projet.ui.components.UtbmLogo
+import androidx.compose.foundation.background
+import kotlinx.coroutines.delay
 
 object Routes {
     const val HOME = "home"
@@ -84,23 +92,28 @@ class MainActivity : ComponentActivity() {
             val systemDarkTheme = isSystemInDarkTheme()
             var isDarkTheme by remember { mutableStateOf(systemDarkTheme) }
             ProjetTheme(darkTheme = isDarkTheme) {
-                AppRoot(
-                    isDarkTheme = isDarkTheme,
-                    onToggleDarkTheme = { isDarkTheme = it }
-                )
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    AppRoot(
+                        isDarkTheme = isDarkTheme,
+                        onToggleDarkTheme = { isDarkTheme = it }
+                    )
+                }
             }
         }
     }
 }
 
-private enum class AppState { LOGIN, REGISTER, WELCOME, MAIN }
+private enum class AppState { SPLASH, LOGIN, REGISTER, WELCOME, MAIN }
 
 @Composable
 fun AppRoot(
     isDarkTheme: Boolean = false,
     onToggleDarkTheme: (Boolean) -> Unit = {}
 ) {
-    var appState by remember { mutableStateOf(AppState.LOGIN) }
+    var appState by remember { mutableStateOf(AppState.SPLASH) }
     var username by remember { mutableStateOf("") }
     var userId by remember { mutableStateOf(0) }
     var isAdmin by remember { mutableStateOf(false) }
@@ -108,28 +121,24 @@ fun AppRoot(
 
     Crossfade(targetState = appState, label = "auth_state") { state ->
         when (state) {
+            AppState.SPLASH -> SplashScreen(onFinish = { appState = AppState.LOGIN })
             AppState.LOGIN -> Connexion(
                 onLoggedIn = { name, id, admin, role ->
-                    username = name
-                    userId = id
-                    isAdmin = admin
-                    userRole = role
+                    username = name; userId = id; isAdmin = admin; userRole = role
                     appState = AppState.MAIN
                 },
                 onNavigateToRegister = { appState = AppState.REGISTER }
             )
             AppState.REGISTER -> Register(
                 onRegistered = { name, id, admin, role ->
-                    username = name
-                    userId = id
-                    isAdmin = admin
-                    userRole = role
+                    username = name; userId = id; isAdmin = admin; userRole = role
                     appState = AppState.WELCOME
                 },
                 onNavigateToLogin = { appState = AppState.LOGIN }
             )
             AppState.WELCOME -> WelcomeScreen(
                 username = username,
+                userId = userId,
                 onContinue = { appState = AppState.MAIN }
             )
             AppState.MAIN -> MainApp(
@@ -140,10 +149,7 @@ fun AppRoot(
                 isDarkTheme = isDarkTheme,
                 onToggleDarkTheme = onToggleDarkTheme,
                 onLogout = {
-                    username = ""
-                    userId = 0
-                    isAdmin = false
-                    userRole = "STUDENT"
+                    username = ""; userId = 0; isAdmin = false; userRole = "STUDENT"
                     appState = AppState.LOGIN
                 }
             )
@@ -152,41 +158,188 @@ fun AppRoot(
 }
 
 @Composable
-fun WelcomeScreen(username: String, onContinue: () -> Unit) {
+fun SplashScreen(onFinish: () -> Unit) {
+    LaunchedEffect(Unit) {
+        delay(2000)
+        onFinish()
+    }
+    
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            UtbmLogo(iconSize = 100.dp)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WelcomeScreen(
+    username: String,
+    userId: Int,
+    vm: ProfileViewModel = viewModel(),
+    onContinue: () -> Unit
+) {
     val utbmBlue = Color(0xFF0055A4)
+    val branches = listOf("TC", "Info", "Méca", "Industrie", "Méca Ergo", "Énergie")
+
+    LaunchedEffect(userId) { vm.load(userId) }
+
+    val allUEs by vm.allUEs.collectAsState()
+    val userUEs by vm.userUEs.collectAsState()
+    val user by vm.user.collectAsState()
+    val selectedBranch = user?.branch ?: ""
+
+    val filteredUEs = if (selectedBranch.isBlank()) emptyList()
+    else allUEs.filter { it.branch == selectedBranch || it.branch == "Transversal" }
+
+    val selectedUEIds = userUEs.map { it.ue.id }.toSet()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("👋", fontSize = 64.sp)
-        Spacer(Modifier.height(24.dp))
-        Text(
-            text = "Bienvenue,",
-            fontSize = 28.sp,
-            color = Color.Gray
-        )
-        Text(
-            text = username,
-            fontSize = 36.sp,
-            fontWeight = FontWeight.Bold,
-            color = utbmBlue
-        )
+        Text("👋", fontSize = 56.sp)
         Spacer(Modifier.height(12.dp))
+        Text("Bienvenue,", fontSize = 18.sp, color = Color.Gray)
+        Text(username, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = utbmBlue)
+        Spacer(Modifier.height(6.dp))
         Text(
-            text = "Votre compte UTBM a été créé avec succès.",
+            "Configurez votre profil pour commencer.",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray
         )
-        Spacer(Modifier.height(48.dp))
+
+        Spacer(Modifier.height(32.dp))
+
+        // Branche
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Votre branche", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(branches) { branch ->
+                        FilterChip(
+                            selected = selectedBranch == branch,
+                            onClick = { vm.updateBranch(if (selectedBranch == branch) "" else branch) },
+                            label = { Text(branch) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = utbmBlue.copy(alpha = 0.15f),
+                                selectedLabelColor = utbmBlue
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // UEs
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Vos UEs", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                    if (selectedBranch.isNotBlank()) {
+                        Text(
+                            "${userUEs.size}/10",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (userUEs.size >= 10) Color(0xFFD32F2F) else utbmBlue
+                        )
+                    }
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+                if (selectedBranch.isBlank()) {
+                    Text(
+                        "Sélectionnez d'abord votre branche pour voir les UEs disponibles.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    filteredUEs.forEachIndexed { index, ue ->
+                        val isSelected = ue.id in selectedUEIds
+                        val canSelect = !isSelected && userUEs.size < 10
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = isSelected || canSelect) {
+                                    if (isSelected) vm.removeUE(ue.id) else vm.addUE(ue.id, false)
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = {
+                                    if (isSelected) vm.removeUE(ue.id)
+                                    else if (canSelect) vm.addUE(ue.id, false)
+                                },
+                                enabled = isSelected || canSelect,
+                                colors = CheckboxDefaults.colors(checkedColor = utbmBlue)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    ue.code,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (!isSelected && !canSelect) Color.Gray else utbmBlue,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    ue.name,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (!isSelected && !canSelect) Color.Gray
+                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (index < filteredUEs.lastIndex) {
+                            HorizontalDivider(modifier = Modifier.padding(start = 48.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(32.dp))
+
         Button(
             onClick = onContinue,
             modifier = Modifier.fillMaxWidth().height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = utbmBlue)
         ) {
             Text("Commencer", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+
+        if (selectedBranch.isBlank()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Vous pouvez aussi configurer ça plus tard depuis votre profil.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
         }
     }
 }
@@ -285,6 +438,7 @@ fun MainApp(
                         onPasteClick = { showPasteDialog = true },
                         isProf = isProf,
                         isAdmin = isAdmin,
+                        userId = userId,
                         vm = agendaVM
                     )
                 }
